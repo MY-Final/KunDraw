@@ -111,18 +111,40 @@ export async function addGeneratedImagesForPrompt(
   images: GeneratedImage[]
 ) {
   const createdIds: TLShapeId[] = []
-  for (let index = 0; index < images.length; index += 1) {
-    const image = images[index]
+  // A batch stays a compact block: up to three columns, then wraps.
+  const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(images.length))))
+  const origin = { x: prompt.x + prompt.props.w + NODE_GAP, y: prompt.y }
+  let column = 0
+  let columnLeft = 0
+  let columnWidth = 0
+  let rowTop = 0
+  let rowHeight = 0
+
+  for (const image of images) {
     const id = await addImageToCanvas(editor, image, {
       sourcePromptId: prompt.id,
-      point: {
-        x: prompt.x + prompt.props.w + NODE_GAP,
-        y: prompt.y + index * 360,
-      },
+      point: { x: origin.x + columnLeft, y: origin.y + rowTop },
     })
     if (!id) continue
+
     createdIds.push(id)
     createRelation(editor, prompt.id, id, "generation")
+
+    const shape = editor.getShape<ImageShape>(id)
+    columnWidth = Math.max(columnWidth, shape?.props.w ?? 0)
+    rowHeight = Math.max(rowHeight, shape?.props.h ?? 0)
+
+    column += 1
+    if (column >= columns) {
+      column = 0
+      columnLeft = 0
+      columnWidth = 0
+      rowTop += rowHeight + NODE_GAP
+      rowHeight = 0
+    } else {
+      columnLeft += columnWidth + NODE_GAP
+      columnWidth = 0
+    }
   }
 
   if (createdIds.length > 0) {
