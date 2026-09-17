@@ -153,6 +153,10 @@ no kunDraw backend, no proxying and no credits/billing concept — never add one
   choice, never derived from the model.
 - Reference roles are sent as a short prompt brief because the API has no
   per-image weights.
+- A generation runs through `AiProvider.generate`, which owns an
+  `AbortController`; `cancelGeneration()` aborts it and the request surfaces as a
+  `cancelled` outcome rather than an error. Only one generation runs at a time —
+  extra attempts return `status: "busy"` and must not mark the node as failed.
 - **No model capability gating.** Any model may be used for either mode; the
   model field accepts free text because gateways often take ids `/models` does
   not list. Do not reintroduce per-model restrictions.
