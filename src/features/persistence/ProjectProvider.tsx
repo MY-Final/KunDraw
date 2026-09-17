@@ -34,7 +34,7 @@ function fallbackProject(): Project {
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const editor = useWorkspaceEditor()
   const [project, setProject] = useState<Project>(() => getStartupState()?.project ?? fallbackProject())
-  const [projects, setProjects] = useState<Project[]>(() => getStartupState()?.projects ?? [])
+  const [projects, setProjects] = useState<Project[]>(() => getStartupState()?.projects ?? [project])
 
   const projectIdRef = useRef(project.id)
   const switchingRef = useRef(false)
