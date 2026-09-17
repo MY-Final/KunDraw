@@ -93,7 +93,7 @@ export function ModelPicker({
                 {notice ??
                   (models.length > 0
                     ? `已获取 ${models.length} 个模型`
-                    : "尚未获取模型列表")}
+                    : "可直接输入模型名称")}
               </span>
               {onRefresh ? (
                 <Button
@@ -111,9 +111,7 @@ export function ModelPicker({
             </div>
             <CommandList>
               <CommandEmpty>
-                {trimmed
-                  ? `使用 “${trimmed}”`
-                  : "可直接输入模型名称，或点击刷新列表"}
+                {trimmed ? `使用 “${trimmed}”` : "暂无模型列表"}
               </CommandEmpty>
               <CommandGroup>
                 {canUseTyped ? (
