@@ -149,4 +149,14 @@
   body {
     @apply overflow-hidden bg-background font-sans text-foreground antialiased;
   }
+
+  .tl-background {
+    background-color: color-mix(in oklab, var(--background) 96%, var(--muted));
+    background-image: radial-gradient(
+      circle,
+      color-mix(in oklab, var(--muted-foreground) 22%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 20px 20px;
+  }
 }

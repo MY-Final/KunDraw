@@ -12,8 +12,14 @@ import type {
   ReferenceImage,
 } from "./types"
 
-export function dataUrlToBlob(dataUrl: string): Blob {
-  const [header, base64] = dataUrl.split(",")
+export async function imageSourceToBlob(source: string): Promise<Blob> {
+  if (!source.startsWith("data:")) {
+    const response = await fetch(source)
+    if (!response.ok) throw new Error(`无法读取参考图（HTTP ${response.status}）`)
+    return response.blob()
+  }
+
+  const [header, base64] = source.split(",")
   const mimeType = /:(.*?);/.exec(header ?? "")?.[1] ?? "image/png"
   const binary = window.atob(base64 ?? "")
   const bytes = new Uint8Array(binary.length)
@@ -76,15 +82,19 @@ export async function runGeneration(
   try {
     const client = new NewApiClient(input.channel)
 
+    const references = await Promise.all(
+      input.references.map(async (reference) => ({
+        blob: await imageSourceToBlob(reference.dataUrl),
+        name: reference.name,
+      }))
+    )
+
     const payloads = await generateImages(client, {
       model: input.model,
       prompt: input.prompt,
       count: input.count,
       size: input.size,
-      references: input.references.map((reference) => ({
-        blob: dataUrlToBlob(reference.dataUrl),
-        name: reference.name,
-      })),
+      references,
     })
 
     const images = payloads.flatMap((payload) => {

@@ -27,6 +27,8 @@ const shapeTypeLabels: Record<string, string> = {
   embed: "嵌入",
   group: "分组",
   bookmark: "书签",
+  "kundraw-prompt": "Prompt 节点",
+  "kundraw-image": "图片节点",
 }
 
 const geoLabels: Record<string, string> = {

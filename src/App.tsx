@@ -17,6 +17,7 @@ import {
 import { Toaster } from "@/components/ui/sonner"
 import { AiProvider } from "@/features/ai/AiProvider"
 import { AiSettingsDialog } from "@/features/ai/components/AiSettingsDialog"
+import { NodeCanvasController } from "@/features/canvas/NodeCanvasController"
 import { EditorProvider, useWorkspaceEditor } from "@/hooks/useEditor"
 import { useProjectName } from "@/hooks/useProjectName"
 
@@ -87,7 +88,12 @@ function Workspace() {
       />
 
       <div className="flex min-h-0 flex-1">
-        <Toolbar />
+        <Toolbar
+          onOpenAi={() => {
+            setPanelOpen(true)
+            setPanelTab("ai")
+          }}
+        />
         <CanvasArea />
         <RightPanel
           open={panelOpen}
@@ -99,6 +105,7 @@ function Workspace() {
       </div>
 
       <StatusBar />
+      <NodeCanvasController />
 
       <AiSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <ClearCanvasDialog

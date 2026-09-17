@@ -30,7 +30,12 @@ export type AiContextValue = AiState & {
   removeReference: (id: string) => void
   clearReferences: () => void
   updateSettings: (patch: Partial<GenerationSettings>) => void
-  generate: (overrides?: Partial<GenerationSettings> & { prompt?: string }) => Promise<void>
+  generate: (
+    overrides?: Partial<GenerationSettings> & {
+      prompt?: string
+      references?: ReferenceImage[]
+    }
+  ) => Promise<GeneratedImage[]>
   removeResult: (id: string) => void
   clearResults: () => void
   clearError: () => void

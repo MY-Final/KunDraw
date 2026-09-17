@@ -1,10 +1,18 @@
-import { AssetRecordType, type Editor } from "tldraw"
+import {
+  AssetRecordType,
+  type Editor,
+  type TLImageAsset,
+  type TLShapePartial,
+  type TLShapeId,
+  type VecModel,
+} from "tldraw"
 
+import { IMAGE_SHAPE_TYPE, type ImageShape } from "@/features/canvas/shapeTypes"
 import type { GeneratedImage } from "./types"
 
 /** Keeps large generations from dominating the canvas. */
 const MAX_CANVAS_SIDE = 512
-const SELECTION_GAP = 32
+const SELECTION_GAP = 56
 
 export function measureImage(src: string): Promise<{ w: number; h: number }> {
   return new Promise((resolve, reject) => {
@@ -40,16 +48,20 @@ function fitSize(w: number, h: number) {
  * Places a generated image on the canvas: create the asset, then the image shape
  * at the viewport center (or beside the current selection), and select it.
  */
-export async function addImageToCanvas(editor: Editor, image: GeneratedImage) {
+export async function addImageToCanvas(
+  editor: Editor,
+  image: GeneratedImage,
+  options: { sourcePromptId?: TLShapeId; point?: VecModel } = {}
+) {
   const natural = await measureImage(image.url)
   const size = fitSize(natural.w, natural.h)
 
   const selectionBounds = editor.getSelectionPageBounds()
   const viewport = editor.getViewportPageBounds()
 
-  const point = selectionBounds
+  const point = options.point ?? (selectionBounds
     ? { x: selectionBounds.maxX + SELECTION_GAP, y: selectionBounds.minY }
-    : { x: viewport.center.x - size.w / 2, y: viewport.center.y - size.h / 2 }
+    : { x: viewport.center.x - size.w / 2, y: viewport.center.y - size.h / 2 })
 
   const asset = AssetRecordType.create({
     id: AssetRecordType.createId(),
@@ -70,10 +82,28 @@ export async function addImageToCanvas(editor: Editor, image: GeneratedImage) {
     editor.markHistoryStoppingPoint("kundraw:add-generated-image")
     editor.createAssets([asset])
 
-    const partial = editor.getShapeUtil("image").createShapeForAsset?.(asset, point)
+    const partial = editor
+      .getShapeUtil<ImageShape>(IMAGE_SHAPE_TYPE)
+      .createShapeForAsset?.(asset as TLImageAsset, point) as
+      | TLShapePartial<ImageShape>
+      | null
+      | undefined
     if (!partial) return
 
-    editor.createShape(partial)
+    editor.createShape<ImageShape>({
+      ...partial,
+      type: IMAGE_SHAPE_TYPE,
+      props: {
+        ...partial.props,
+        imageUrl: image.url,
+        name: `kundraw-${image.id}`,
+        mimeType: mimeFromUrl(image.url),
+        model: image.source.model,
+        prompt: image.source.prompt,
+        createdAt: image.createdAt,
+        sourcePromptId: String(options.sourcePromptId ?? ""),
+      },
+    })
     createdShapeId = partial.id
   })
 
@@ -81,6 +111,8 @@ export async function addImageToCanvas(editor: Editor, image: GeneratedImage) {
     editor.select(createdShapeId)
     editor.focus()
   }
+
+  return createdShapeId
 }
 
 function triggerDownload(href: string, filename: string) {

@@ -123,8 +123,13 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
   const clearError = useCallback(() => setError(null), [])
 
   const generate = useCallback(
-    async (overrides?: Partial<GenerationSettings> & { prompt?: string }) => {
-      if (generating.current) return
+    async (
+      overrides?: Partial<GenerationSettings> & {
+        prompt?: string
+        references?: ReferenceImage[]
+      }
+    ) => {
+      if (generating.current) return []
 
       const nextSettings: GenerationSettings = { ...settings, ...overrides }
       const nextPrompt = (overrides?.prompt ?? prompt).trim()
@@ -137,15 +142,15 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
           title: "尚未配置 NewAPI 渠道",
           hints: ["打开右上角设置，添加一个渠道并填写地址与 API Key"],
         })
-        return
+        return []
       }
       if (!model) {
         setError({ kind: "input", title: "请选择或输入模型名称", hints: [] })
-        return
+        return []
       }
       if (!nextPrompt) {
         setError({ kind: "input", title: "请先输入提示词", hints: [] })
-        return
+        return []
       }
 
       setError(null)
@@ -158,17 +163,19 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
           model,
           settings: nextSettings,
           prompt: nextPrompt,
-          references: nextSettings.mode === "image" ? references : [],
+          references:
+            nextSettings.mode === "image" ? (overrides?.references ?? references) : [],
         })
 
         const outcome = await runGeneration(input)
 
         if ("error" in outcome) {
           setError(outcome.error)
-          return
+          return []
         }
 
         setResults((current) => [...outcome.images, ...current])
+        return outcome.images
       } finally {
         generating.current = false
         setStatus("idle")
