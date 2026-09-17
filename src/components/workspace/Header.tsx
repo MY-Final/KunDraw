@@ -1,24 +1,101 @@
-import {
-  Check,
-  ChevronDown,
-  Download,
-  PanelRight,
-  PenTool,
-  Redo2,
-  Settings,
-  Undo2,
-} from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Check, ChevronDown, Download, PanelRight, PenTool, Redo2, Settings, Undo2 } from "lucide-react"
 import { cn } from "cn"
 import { useValue } from "tldraw"
 
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
+function ProjectName({
+  name,
+  onRename,
+  onClear,
+}: {
+  name: string
+  onRename: (name: string) => void
+  onClear: () => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(name)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!editing) return
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [editing])
+
+  const commit = useCallback(() => {
+    const next = draft.trim()
+    onRename(next || name)
+    setDraft(next || name)
+    setEditing(false)
+  }, [draft, name, onRename])
+
+  if (editing) {
+    return (
+      <Input
+        ref={inputRef}
+        aria-label="项目名称"
+        value={draft}
+        maxLength={60}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault()
+            commit()
+          }
+          if (event.key === "Escape") {
+            event.preventDefault()
+            setDraft(name)
+            setEditing(false)
+          }
+        }}
+        className="h-7 w-[200px] text-center text-sm"
+      />
+    )
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="项目菜单"
+        className="hidden items-center gap-1.5 rounded-md px-2.5 py-1 text-sm transition-colors hover:bg-muted sm:flex"
+      >
+        <span className="max-w-[220px] truncate font-medium">{name}</span>
+        <ChevronDown className="size-3.5 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center" className="w-44">
+        <DropdownMenuItem onClick={() => setEditing(true)}>重命名</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive" onClick={onClear}>
+          清空画布
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 function Header({
+  projectName,
+  onRenameProject,
+  onClearCanvas,
   onOpenSettings,
   panelOpen,
   onTogglePanel,
 }: {
+  projectName: string
+  onRenameProject: (name: string) => void
+  onClearCanvas: () => void
   onOpenSettings: () => void
   panelOpen: boolean
   onTogglePanel: () => void
@@ -47,20 +124,17 @@ function Header({
       </div>
 
       <div className="flex flex-1 justify-center">
-        <button
-          type="button"
-          className="hidden items-center gap-1.5 rounded-md px-2.5 py-1 text-sm transition-colors hover:bg-muted sm:flex"
-        >
-          <span className="max-w-[220px] truncate font-medium">未命名项目</span>
-          <span className="text-xs text-muted-foreground">草稿</span>
-          <ChevronDown className="size-3.5 text-muted-foreground" />
-        </button>
+        <ProjectName
+          name={projectName}
+          onRename={onRenameProject}
+          onClear={onClearCanvas}
+        />
       </div>
 
       <div className="flex items-center gap-1">
         <div className="hidden items-center gap-1.5 pr-1 text-xs text-muted-foreground md:flex">
           <Check className="size-3.5" />
-          <span>已保存</span>
+          <span>本地草稿</span>
         </div>
 
         <span className="mx-1 hidden h-5 w-px bg-border md:block" />

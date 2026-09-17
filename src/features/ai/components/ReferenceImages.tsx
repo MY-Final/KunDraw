@@ -1,21 +1,19 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ImagePlus, X } from "lucide-react"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
-import { ACCEPTED_REFERENCE_TYPES, MAX_REFERENCES } from "../constants"
-import type { ImageModel, ReferenceImage } from "../types"
+import { ACCEPTED_REFERENCE_TYPES } from "../constants"
+import type { ReferenceImage } from "../types"
 import { AiField } from "./AiField"
 
 export function ReferenceImages({
   references,
-  model,
   onAdd,
   onRemove,
   onClear,
 }: {
   references: ReferenceImage[]
-  model: ImageModel
   onAdd: (files: File[]) => Promise<void>
   onRemove: (id: string) => void
   onClear: () => void
@@ -24,35 +22,33 @@ export function ReferenceImages({
   const [dragging, setDragging] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const limit = Math.min(
-    MAX_REFERENCES,
-    model.capabilities.multipleReferences
-      ? (model.capabilities.maxReferences ?? MAX_REFERENCES)
-      : 1
-  )
-  const atLimit = references.length >= limit
-
   const accept = useCallback(
     async (files: File[]) => {
       if (files.length === 0) return
-      const room = limit - references.length
-      if (room <= 0) {
-        setNotice(`当前模型最多支持 ${limit} 张参考图`)
-        return
-      }
-      if (files.length > room) {
-        setNotice(`仅保留前 ${room} 张，当前模型最多支持 ${limit} 张参考图`)
-      } else {
-        setNotice(null)
-      }
       try {
-        await onAdd(files.slice(0, room))
+        setNotice(null)
+        await onAdd(files)
       } catch (error) {
         setNotice(error instanceof Error ? error.message : "添加参考图失败")
       }
     },
-    [limit, onAdd, references.length]
+    [onAdd]
   )
+
+  // Pasting works anywhere on the panel, not only over the drop area.
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const files = Array.from(event.clipboardData?.files ?? []).filter((file) =>
+        file.type.startsWith("image/")
+      )
+      if (files.length === 0) return
+      event.preventDefault()
+      void accept(files)
+    }
+
+    window.addEventListener("paste", onPaste)
+    return () => window.removeEventListener("paste", onPaste)
+  }, [accept])
 
   return (
     <AiField
@@ -73,7 +69,7 @@ export function ReferenceImages({
         ref={inputRef}
         type="file"
         accept={ACCEPTED_REFERENCE_TYPES.join(",")}
-        multiple={model.capabilities.multipleReferences}
+        multiple
         className="hidden"
         onChange={(event) => {
           void accept(Array.from(event.target.files ?? []))
@@ -81,71 +77,61 @@ export function ReferenceImages({
         }}
       />
 
-      {references.length === 0 ? (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          onDragOver={(event) => {
-            event.preventDefault()
-            setDragging(true)
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(event) => {
-            event.preventDefault()
-            setDragging(false)
-            void accept(Array.from(event.dataTransfer.files))
-          }}
-          className={cn(
-            "flex w-full flex-col items-center gap-1 rounded-md border border-dashed border-border py-4 transition-colors hover:border-brand/50 hover:bg-brand-subtle/50",
-            dragging && "border-brand bg-brand-subtle"
-          )}
-        >
-          <ImagePlus className="size-4 text-muted-foreground" />
-          <span className="text-[11px] text-muted-foreground">
-            拖入图片到这里
-          </span>
-          <span className="text-[11px] text-muted-foreground">或点击上传</span>
-        </button>
-      ) : (
-        <div
-          className={cn(
-            "flex flex-wrap gap-2 rounded-md",
-            dragging && "ring-2 ring-brand/40"
-          )}
-          onDragOver={(event) => {
-            event.preventDefault()
-            setDragging(true)
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(event) => {
-            event.preventDefault()
-            setDragging(false)
-            void accept(Array.from(event.dataTransfer.files))
-          }}
-        >
-          {references.map((reference) => (
-            <div
-              key={reference.id}
-              className="group/ref relative size-14 overflow-hidden rounded-md border border-border bg-muted"
-            >
-              <img
-                src={reference.dataUrl}
-                alt={reference.name}
-                className="size-full object-cover"
-              />
-              <button
-                type="button"
-                aria-label={`移除 ${reference.name}`}
-                title="移除"
-                onClick={() => onRemove(reference.id)}
-                className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-foreground/70 text-background opacity-0 transition-opacity group-hover/ref:opacity-100 focus-visible:opacity-100"
+      <div
+        onDragOver={(event) => {
+          event.preventDefault()
+          setDragging(true)
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault()
+          setDragging(false)
+          void accept(Array.from(event.dataTransfer.files))
+        }}
+        className={cn(
+          "rounded-md border border-dashed border-border transition-colors",
+          dragging && "border-brand bg-brand-subtle"
+        )}
+      >
+        {references.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex w-full flex-col items-center gap-1 py-4 transition-colors hover:bg-brand-subtle/50"
+          >
+            <ImagePlus className="size-4 text-muted-foreground" />
+            <span className="text-[11px] text-muted-foreground">
+              点击、拖拽或粘贴图片到此处
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              可添加多张参考图
+            </span>
+          </button>
+        ) : (
+          <div className="flex flex-wrap gap-2 p-2">
+            {references.map((reference) => (
+              <div
+                key={reference.id}
+                className="group/ref relative size-14 overflow-hidden rounded-md border border-border bg-muted"
               >
-                <X className="size-2.5" />
-              </button>
-            </div>
-          ))}
+                <img
+                  src={reference.dataUrl}
+                  alt={reference.name}
+                  title={reference.name}
+                  className="size-full object-cover"
+                />
+                <button
+                  type="button"
+                  aria-label={`移除 ${reference.name}`}
+                  title="移除"
+                  onClick={() => onRemove(reference.id)}
+                  className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-foreground/70 text-background opacity-0 transition-opacity group-hover/ref:opacity-100 focus-visible:opacity-100"
+                >
+                  <X className="size-2.5" />
+                </button>
+              </div>
+            ))}
 
-          {!atLimit ? (
             <Button
               variant="outline"
               size="icon"
@@ -156,13 +142,15 @@ export function ReferenceImages({
             >
               <ImagePlus />
             </Button>
-          ) : null}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
-      {notice ?? !model.capabilities.multipleReferences ? (
+      {notice ? (
+        <p className="text-[11px] text-destructive">{notice}</p>
+      ) : references.length > 0 ? (
         <p className="text-[11px] text-muted-foreground">
-          {notice ?? `当前模型最多支持 ${limit} 张参考图`}
+          已添加 {references.length} 张，多张会作为组图参考一起发送
         </p>
       ) : null}
     </AiField>
