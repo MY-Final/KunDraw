@@ -90,6 +90,12 @@ StatusBar                              (32px)
 | `src/features/persistence/assets.ts` | Image blobs in IndexedDB and their runtime object URLs |
 | `src/features/persistence/ProjectProvider.tsx` | Debounced autosave, project switching, save status |
 | `src/features/persistence/components/` | Project menu, save status indicator, local data section |
+| `src/features/persistence/resultStore.ts` | Per-project generation gallery (image blobs in IndexedDB) |
+| `src/features/ai/referenceRoles.ts` | Reference role summary and the prompt brief sent with references |
+| `src/features/canvas/InpaintDialog.tsx` | Mask painting dialog for local repaint |
+| `src/features/canvas/canvasMaintenance.ts` | One-time normalizers that run after a project loads |
+| `src/components/workspace/ArrangeSections.tsx` | Align / distribute / group / layer controls |
+| `src/components/workspace/PageMenu.tsx` | Page list with create, rename and delete |
 | `src/hooks/useToolShortcuts.ts` | Extra key bindings tldraw does not provide |
 | `src/components/ui/` | shadcn/ui components; generated, edit sparingly |
 
@@ -143,7 +149,10 @@ no kunDraw backend, no proxying and no credits/billing concept — never add one
 - All requests go through `NewApiClient`; never call `fetch` from a component.
 - Text-to-image → `POST {base}/images/generations` (JSON). Image-to-image →
   `POST {base}/images/edits` (multipart, `image` for one reference, `image[]` for
-  several). The mode is the user's choice, never derived from the model.
+  several, plus an optional `mask` for local repaint). The mode is the user's
+  choice, never derived from the model.
+- Reference roles are sent as a short prompt brief because the API has no
+  per-image weights.
 - **No model capability gating.** Any model may be used for either mode; the
   model field accepts free text because gateways often take ids `/models` does
   not list. Do not reintroduce per-model restrictions.
