@@ -84,32 +84,34 @@ export function GenerationSettings({
         <ChevronDown className={cn("size-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
       </CollapsibleTrigger>
 
-      <CollapsibleContent className="space-y-4 border-t border-border px-3 pt-3 pb-3">
-        <ChannelPicker onOpenSettings={onOpenSettings} disabled={disabled} />
+      <CollapsibleContent className="h-[var(--collapsible-panel-height)] overflow-hidden opacity-100 transition-[height,opacity] duration-300 ease-out motion-reduce:transition-none data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0">
+        <div className="space-y-4 border-t border-border px-3 pt-3 pb-3">
+          <ChannelPicker onOpenSettings={onOpenSettings} disabled={disabled} />
 
-        <ChoiceGroup ariaLabel="生成模式" value={mode} choices={MODE_CHOICES} onChange={onModeChange} disabled={disabled} />
+          <ChoiceGroup ariaLabel="生成模式" value={mode} choices={MODE_CHOICES} onChange={onModeChange} disabled={disabled} />
 
-        <ModelPicker models={models} value={model} onChange={onModelChange} onRefresh={onRefreshModels} disabled={disabled} />
+          <ModelPicker models={models} value={model} onChange={onModelChange} onRefresh={onRefreshModels} disabled={disabled} />
 
-        <div className="space-y-2">
-          <span className="text-xs font-medium text-foreground/80">比例</span>
-          <ChoiceGroup ariaLabel="比例" value={aspectRatio} choices={ASPECT_CHOICES} onChange={onAspectRatioChange} disabled={disabled} wrap />
-        </div>
-
-        <div className="space-y-2">
-          <span className="text-xs font-medium text-foreground/80">分辨率</span>
-          <ChoiceGroup ariaLabel="分辨率" value={String(resolution)} choices={RESOLUTION_CHOICES} onChange={(value) => onResolutionChange(Number(value) as BaseResolution)} disabled={disabled} />
-        </div>
-
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium text-foreground/80">生成数量</p>
-            <p className="text-[10px] text-muted-foreground">每次生成的结果张数</p>
+          <div className="space-y-2">
+            <span className="text-xs font-medium text-foreground/80">比例</span>
+            <ChoiceGroup ariaLabel="比例" value={aspectRatio} choices={ASPECT_CHOICES} onChange={onAspectRatioChange} disabled={disabled} wrap />
           </div>
-          <div className="flex items-center rounded-md border border-border bg-background p-0.5">
-            <Button type="button" variant="ghost" size="icon-xs" aria-label="减少生成数量" title="减少生成数量" disabled={disabled || count <= MIN_COUNT} onClick={() => onCountChange(Math.max(MIN_COUNT, count - 1))}><Minus /></Button>
-            <span className="w-12 text-center text-xs font-medium tabular-nums">{count} 张</span>
-            <Button type="button" variant="ghost" size="icon-xs" aria-label="增加生成数量" title="增加生成数量" disabled={disabled || count >= MAX_COUNT} onClick={() => onCountChange(Math.min(MAX_COUNT, count + 1))}><Plus /></Button>
+
+          <div className="space-y-2">
+            <span className="text-xs font-medium text-foreground/80">分辨率</span>
+            <ChoiceGroup ariaLabel="分辨率" value={String(resolution)} choices={RESOLUTION_CHOICES} onChange={(value) => onResolutionChange(Number(value) as BaseResolution)} disabled={disabled} />
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-foreground/80">生成数量</p>
+              <p className="text-[10px] text-muted-foreground">每次生成的结果张数</p>
+            </div>
+            <div className="flex items-center rounded-md border border-border bg-background p-0.5">
+              <Button type="button" variant="ghost" size="icon-xs" aria-label="减少生成数量" title="减少生成数量" disabled={disabled || count <= MIN_COUNT} onClick={() => onCountChange(Math.max(MIN_COUNT, count - 1))}><Minus /></Button>
+              <span className="w-12 text-center text-xs font-medium tabular-nums">{count} 张</span>
+              <Button type="button" variant="ghost" size="icon-xs" aria-label="增加生成数量" title="增加生成数量" disabled={disabled || count >= MAX_COUNT} onClick={() => onCountChange(Math.min(MAX_COUNT, count + 1))}><Plus /></Button>
+            </div>
           </div>
         </div>
       </CollapsibleContent>

@@ -2,7 +2,7 @@ import { errorFromResponse, NewApiError, toNewApiError } from "./errors"
 import type { OpenAiModelListResponse } from "./types"
 
 export const MODELS_TIMEOUT_MS = 20_000
-export const GENERATION_TIMEOUT_MS = 180_000
+export const GENERATION_TIMEOUT_MS = 10 * 60_000
 
 function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.trim().replace(/\/+$/, "")

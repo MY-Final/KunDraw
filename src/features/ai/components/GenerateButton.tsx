@@ -1,6 +1,7 @@
 import { LoaderCircle, Sparkles } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { GenerationElapsed } from "./GenerationElapsed"
 
 export function GenerateButton({
   loading,
@@ -22,7 +23,7 @@ export function GenerateButton({
       {loading ? (
         <>
           <LoaderCircle className="size-3.5 animate-spin" />
-          正在生成...
+          正在生成 · <GenerationElapsed />
         </>
       ) : (
         <>

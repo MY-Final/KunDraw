@@ -141,7 +141,7 @@ function hintsFor(kind: NewApiErrorKind, context: "generate" | "models") {
             "服务端需允许 Authorization 与 Content-Type 请求头",
           ]
     case "timeout":
-      return ["图片生成可能耗时较长，请稍后重试", "确认上游服务未卡住"]
+      return ["客户端已等待 10 分钟仍未收到结果", "确认上游服务未卡住，或降低生成负载后重试"]
     case "cancelled":
       return []
     case "config":

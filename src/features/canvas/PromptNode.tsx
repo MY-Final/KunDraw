@@ -6,6 +6,7 @@ import { HTMLContainer, useValue, type Editor, type TLImageAsset, type TLShapeId
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ACCEPTED_REFERENCE_TYPES, ASPECT_RATIOS, ASPECT_RATIO_LABELS } from "@/features/ai/constants"
+import { GenerationElapsed } from "@/features/ai/components/GenerationElapsed"
 import { ModelPicker } from "@/features/ai/components/ModelPicker"
 import { useAi } from "@/features/ai/useAi"
 
@@ -139,7 +140,7 @@ export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Edit
           </section>
           <Button type="button" size="sm" disabled={!props.prompt.trim() || props.status === "generating"} className="w-full bg-brand text-brand-foreground hover:bg-brand/90" onClick={() => dispatchNodeAction(editor, { type: "generate-prompt", shapeId: shape.id })}>
             {props.status === "generating" ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
-            {props.status === "generating" ? "生成中..." : "生成图片"}
+            {props.status === "generating" ? <>生成中 · <GenerationElapsed /></> : "生成图片"}
           </Button>
         </div>
       </article>
