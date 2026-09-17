@@ -34,8 +34,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const editor = useWorkspaceEditor()
   const [project, setProject] = useState<Project>(() => getStartupState()?.project ?? fallbackProject())
   const [projects, setProjects] = useState<Project[]>(() => getStartupState()?.projects ?? [project])
+  const [canEdit, setCanEdit] = useState(true)
 
   const projectIdRef = useRef(project.id)
+  const canEditRef = useRef(true)
   const switchingRef = useRef(false)
   const restoredRef = useRef(false)
   const autosaveRef = useRef<{
@@ -56,6 +58,65 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         switchingRef.current = false
       })
   }, [editor])
+
+  const applyCanEdit = useCallback((value: boolean) => {
+    canEditRef.current = value
+    setCanEdit(value)
+  }, [])
+
+  /**
+   * Only one tab may write a project. A second tab opens read-only, reloads the
+   * stored canvas when the first tab closes, and then takes over.
+   */
+  useEffect(() => {
+    if (!editor) return
+
+    const locks = typeof navigator === "undefined" ? undefined : navigator.locks
+    // Without the Web Locks API the workspace stays editable, as before.
+    if (!locks) return
+
+    const name = `kundraw-project:${project.id}`
+    let cancelled = false
+    let release: (() => void) | null = null
+    const waitForTurn = () => new Promise<void>((resolve) => { release = resolve })
+
+    const takeOver = async () => {
+      if (cancelled) return
+      await loadProjectCanvas(editor, projectIdRef.current).catch(() => undefined)
+      if (cancelled) return
+      applyCanEdit(true)
+      await waitForTurn()
+    }
+
+    const acquire = async () => {
+      await locks.request(name, { ifAvailable: true }, async (lock) => {
+        if (cancelled) return
+        if (!lock) {
+          applyCanEdit(false)
+          return
+        }
+        applyCanEdit(true)
+        await waitForTurn()
+      })
+
+      if (cancelled) return
+      await locks.request(name, async () => {
+        await takeOver()
+      })
+    }
+
+    void acquire()
+
+    return () => {
+      cancelled = true
+      release?.()
+    }
+  }, [applyCanEdit, editor, project.id])
+
+  useEffect(() => {
+    if (!editor) return
+    editor.updateInstanceState({ isReadonly: !canEdit })
+  }, [canEdit, editor])
 
   useEffect(() => {
     if (!editor) return
@@ -79,7 +140,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     const save = () => {
       const run = async () => {
-        if (disposed) return
+        if (disposed || !canEditRef.current) return
         const projectId = projectIdRef.current
         setSaveStatus("saving")
 
@@ -126,7 +187,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     autosaveRef.current = { flush, settle: () => saveChain, cancel }
 
     const schedule = () => {
-      if (switchingRef.current) return
+      if (switchingRef.current || !canEditRef.current) return
       if (saveTimer !== null) window.clearTimeout(saveTimer)
       saveTimer = window.setTimeout(() => {
         saveTimer = null
@@ -261,13 +322,23 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     () => ({
       projects,
       project,
+      canEdit,
       createProject,
       switchProject,
       renameProject,
       deleteProject,
       clearAllLocalData,
     }),
-    [projects, project, createProject, switchProject, renameProject, deleteProject, clearAllLocalData]
+    [
+      projects,
+      project,
+      canEdit,
+      createProject,
+      switchProject,
+      renameProject,
+      deleteProject,
+      clearAllLocalData,
+    ]
   )
 
   return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>

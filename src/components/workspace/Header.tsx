@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react"
 import {
   Download,
+  EyeOff,
   LoaderCircle,
   PanelRight,
   PenTool,
@@ -31,7 +32,7 @@ function Header({
   onTogglePanel: () => void
 }) {
   const editor = useWorkspaceEditor()
-  const { project } = useProject()
+  const { project, canEdit } = useProject()
   const [exporting, setExporting] = useState(false)
 
   const canUndo = useValue(
@@ -76,7 +77,17 @@ function Header({
       </div>
 
       <div className="flex items-center gap-1">
-        <SaveStatusIndicator />
+        {canEdit ? (
+          <SaveStatusIndicator />
+        ) : (
+          <span
+            title="关闭另一个标签页后，本页会自动接管并恢复编辑"
+            className="hidden items-center gap-1.5 pr-1 text-xs text-amber-600 md:flex"
+          >
+            <EyeOff className="size-3.5" />
+            只读 · 另一个标签页正在编辑
+          </span>
+        )}
 
         <span className="mx-1 hidden h-5 w-px bg-border md:block" />
 
