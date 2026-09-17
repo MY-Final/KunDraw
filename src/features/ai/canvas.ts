@@ -109,6 +109,10 @@ export async function addImageToCanvas(
 
   if (createdShapeId) {
     editor.select(createdShapeId)
+    editor.zoomToSelectionIfOffscreen(24, {
+      targetZoom: editor.getZoomLevel(),
+      animation: { duration: 200 },
+    })
     editor.focus()
   }
 

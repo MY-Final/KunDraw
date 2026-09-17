@@ -1,5 +1,6 @@
 import {
   createShapeId,
+  type Box,
   type Editor,
   type TLShapeId,
   type VecModel,
@@ -21,6 +22,23 @@ import { referencesForPrompt } from "./references"
 
 const NODE_GAP = 72
 
+/**
+ * New nodes go to the right of the selection, or below it when the right side
+ * would fall outside the visible canvas (for example under the right panel).
+ */
+function nextNodePoint(selection: Box | null, viewport: Box, defaults: PromptShapeProps): VecModel {
+  if (!selection) {
+    return {
+      x: viewport.center.x - defaults.w / 2,
+      y: viewport.center.y - defaults.h / 2,
+    }
+  }
+
+  const rightX = selection.maxX + NODE_GAP
+  if (rightX + defaults.w <= viewport.maxX) return { x: rightX, y: selection.minY }
+  return { x: selection.minX, y: selection.maxY + NODE_GAP }
+}
+
 export function createPromptNode(
   editor: Editor,
   options: {
@@ -33,14 +51,7 @@ export function createPromptNode(
   const defaults = editor.getShapeUtil<PromptShape>(PROMPT_SHAPE_TYPE).getDefaultProps()
   const viewport = editor.getViewportPageBounds()
   const selection = editor.getSelectionPageBounds()
-  const point =
-    options.point ??
-    (selection
-      ? { x: selection.maxX + NODE_GAP, y: selection.minY }
-      : {
-          x: viewport.center.x - defaults.w / 2,
-          y: viewport.center.y - defaults.h / 2,
-        })
+  const point = options.point ?? nextNodePoint(selection, viewport, defaults)
 
   editor.markHistoryStoppingPoint("kundraw:create-prompt")
   editor.createShape<PromptShape>({
@@ -55,6 +66,10 @@ export function createPromptNode(
   })
 
   if (options.select !== false) editor.select(id)
+  editor.zoomToSelectionIfOffscreen(24, {
+    targetZoom: editor.getZoomLevel(),
+    animation: { duration: 200 },
+  })
   editor.focus()
   return id
 }
