@@ -26,6 +26,8 @@ export type ImageShapeProps = {
   h: number
   assetId: string
   imageUrl: string
+  /** Normalized crop box; null means the whole image is shown. */
+  crop: { topLeft: { x: number; y: number }; bottomRight: { x: number; y: number } } | null
   name: string
   mimeType: string
   model: string

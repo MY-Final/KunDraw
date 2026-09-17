@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
-import { normalizeDefaultPageName } from "@/features/canvas/pages"
+import { normalizeDefaultPageName, normalizeImageShapes } from "@/features/canvas/canvasMaintenance"
 
 import { getStartupState } from "./boot"
 import { clearCanvasContent, loadProjectCanvas, saveProjectCanvas } from "./canvasStorage"
@@ -61,7 +61,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     switchingRef.current = true
 
     void loadProjectCanvas(editor, projectIdRef.current)
-      .then(() => normalizeDefaultPageName(editor))
+      .then(() => {
+        normalizeDefaultPageName(editor)
+        normalizeImageShapes(editor)
+      })
       .catch((error) => console.error("[kunDraw] 画布恢复失败", error))
       .finally(() => {
         switchingRef.current = false
@@ -244,6 +247,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         const restored = await loadProjectCanvas(editor, next.id)
         if (!restored) clearCanvasContent(editor)
         normalizeDefaultPageName(editor)
+        normalizeImageShapes(editor)
         await writeCurrentProjectId(next.id)
         projectIdRef.current = next.id
         setProject(next)

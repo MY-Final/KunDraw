@@ -71,6 +71,16 @@ export function NodeCanvasController() {
         })
         return
       }
+      if (action.type === "crop-image") {
+        const image = editor.getShape<ImageShape>(action.shapeId)
+        if (!image || image.type !== IMAGE_SHAPE_TYPE) return
+        editor.markHistoryStoppingPoint("kundraw:crop-image")
+        editor.setCroppingShape(
+          editor.getCroppingShapeId() === image.id ? null : image.id
+        )
+        editor.focus()
+        return
+      }
       if (action.type === "delete-node") {
         editor.deleteShapes([action.shapeId])
         editor.focus()
