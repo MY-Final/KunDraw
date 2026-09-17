@@ -77,15 +77,19 @@ StatusBar                              (32px)
 | `src/api/newapi/errors.ts` | Status → `NewApiError` mapping and user-facing hints |
 | `src/api/newapi/types.ts` | OpenAI-compatible request/response shapes |
 | `src/features/ai/AiProvider.tsx` | AI state: channels, prompt, references, settings, results, status |
-| `src/features/ai/models.ts` | Built-in model ids merged with what the channel reports |
 | `src/features/ai/constants.ts` | Ratios, resolutions, count bounds + `computeSize()` |
 | `src/features/ai/generate.ts` | Request assembly + generation orchestration |
 | `src/features/ai/canvas.ts` | `addImageToCanvas()` and image download |
-| `src/features/ai/storage.ts` | localStorage persistence for channels, prompt draft, settings |
+| `src/features/ai/storage.ts` | App settings (channels, API key, prompt draft) in IndexedDB, hydrated at boot |
 | `src/features/ai/components/` | `AiPanel`, `AiSettingsDialog`, `ResultGallery`, pickers, inputs |
 | `src/hooks/useEditor.tsx` | `EditorProvider` and editor context hooks |
 | `src/hooks/useSelectedShapes.ts` | Reactive current selection |
-| `src/hooks/useProjectName.ts` | Local project name label |
+| `src/features/persistence/db.ts` | IndexedDB stores and record helpers (projects, canvases, assets, settings, meta) |
+| `src/features/persistence/projects.ts` | Project records, current project id, startup resolution |
+| `src/features/persistence/canvasStorage.ts` | tldraw snapshot save/restore plus asset reference rewriting |
+| `src/features/persistence/assets.ts` | Image blobs in IndexedDB and their runtime object URLs |
+| `src/features/persistence/ProjectProvider.tsx` | Debounced autosave, project switching, save status |
+| `src/features/persistence/components/` | Project menu, save status indicator, local data section |
 | `src/hooks/useToolShortcuts.ts` | Extra key bindings tldraw does not provide |
 | `src/components/ui/` | shadcn/ui components; generated, edit sparingly |
 
@@ -147,7 +151,8 @@ no kunDraw backend, no proxying and no credits/billing concept — never add one
   sent as group references.
 - `size` comes from `computeSize()` in `constants.ts` — aspect ratio × base
   resolution. `auto` ratio sends no `size` at all.
-- API keys live in localStorage and must never be hard-coded or logged.
+- API keys live in IndexedDB (app settings record, never project data) and must
+  never be hard-coded, logged, or written into a canvas snapshot.
 - Raw errors stay in the console; the UI shows `describeNewApiError()` output.
 
 ## Canvas image insertion
