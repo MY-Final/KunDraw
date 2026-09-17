@@ -1,15 +1,14 @@
 import { NewApiClient } from "@/api/newapi/client"
 import { describeNewApiError, toNewApiError } from "@/api/newapi/errors"
 import { generateImages } from "@/api/newapi/images"
-import type { NewApiConfig } from "@/api/newapi/types"
 
-import { PROMPT_MAX_LENGTH } from "./constants"
-import { getImageModel, resolveSize } from "./models"
+import { computeSize } from "./constants"
 import type {
   AiError,
+  Channel,
   GeneratedImage,
   GeneratedImageSource,
-  ImageModel,
+  GenerationSettings,
   ReferenceImage,
 } from "./types"
 
@@ -33,54 +32,40 @@ function toDataUrl(payload: { b64Json?: string; url?: string; mimeType?: string 
   return payload.url ?? null
 }
 
-function createId() {
-  return `img_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
-}
-
-function clampCount(model: ImageModel, count: number) {
-  const supported = model.capabilities.supportedCounts
-  if (supported.length === 0) return count
-  return Math.min(count, Math.max(...supported))
-}
-
 export type GenerationInput = {
-  config: NewApiConfig
-  model: ImageModel
+  channel: Channel
+  model: string
   prompt: string
-  size?: string
   count: number
+  size?: string
   references: ReferenceImage[]
   source: GeneratedImageSource
 }
 
-/** Pure request assembly: only fields the selected model declares are included. */
+/** Pure request assembly — the mode decides whether references are sent. */
 export function buildGenerationInput(params: {
-  config: NewApiConfig
-  models: ImageModel[]
-  modelId: string
+  channel: Channel
+  model: string
+  settings: GenerationSettings
   prompt: string
-  aspectRatio: GeneratedImageSource["aspectRatio"]
-  count: number
   references: ReferenceImage[]
 }): GenerationInput {
-  const model = getImageModel(params.models, params.modelId)
-  const usesReferences =
-    params.references.length > 0 && model.capabilities.imageToImage
-  const prompt = params.prompt.trim().slice(0, PROMPT_MAX_LENGTH)
+  const { channel, model, settings, prompt, references } = params
+  const sendsReferences = settings.mode === "image" && references.length > 0
 
   return {
-    config: params.config,
+    channel,
     model,
     prompt,
-    size: resolveSize(model, params.aspectRatio),
-    count: clampCount(model, usesReferences ? 1 : params.count),
-    references: usesReferences ? params.references : [],
+    count: settings.count,
+    size: computeSize(settings),
+    references: sendsReferences ? references : [],
     source: {
       prompt,
-      modelId: model.id,
-      modelName: model.name,
-      aspectRatio: params.aspectRatio,
-      count: params.count,
+      model,
+      channelName: channel.name || channel.baseUrl,
+      mode: settings.mode,
+      count: settings.count,
     },
   }
 }
@@ -89,18 +74,13 @@ export async function runGeneration(
   input: GenerationInput
 ): Promise<{ images: GeneratedImage[] } | { error: AiError }> {
   try {
-    const client = new NewApiClient(input.config)
+    const client = new NewApiClient(input.channel)
 
     const payloads = await generateImages(client, {
-      model: input.model.id,
+      model: input.model,
       prompt: input.prompt,
       count: input.count,
       size: input.size,
-      responseFormat:
-        input.model.supportsResponseFormat === false
-          ? undefined
-          : input.config.responseFormat,
-      extraParams: input.model.extraParams,
       references: input.references.map((reference) => ({
         blob: dataUrlToBlob(reference.dataUrl),
         name: reference.name,
@@ -112,7 +92,7 @@ export async function runGeneration(
       if (!url) return []
       return [
         {
-          id: createId(),
+          id: `img_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
           url,
           createdAt: Date.now(),
           source: input.source,

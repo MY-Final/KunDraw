@@ -2,16 +2,17 @@ import { createContext } from "react"
 
 import type {
   AiError,
+  Channel,
   GeneratedImage,
   GenerationSettings,
-  ImageModel,
   ReferenceImage,
 } from "./types"
-import type { StoredConfig } from "./storage"
 
 export type AiState = {
-  config: StoredConfig
-  models: ImageModel[]
+  channels: Channel[]
+  activeChannel: Channel | null
+  /** Built-in model ids plus the active channel's discovered models. */
+  models: string[]
   prompt: string
   references: ReferenceImage[]
   settings: GenerationSettings
@@ -22,7 +23,8 @@ export type AiState = {
 
 export type AiContextValue = AiState & {
   isConfigured: boolean
-  setConfig: (config: StoredConfig) => void
+  setChannels: (channels: Channel[]) => void
+  setActiveChannelId: (id: string) => void
   setPrompt: (prompt: string) => void
   addReferences: (files: File[]) => Promise<void>
   removeReference: (id: string) => void

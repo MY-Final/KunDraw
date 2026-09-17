@@ -1,33 +1,18 @@
-export type AspectRatio = "1:1" | "4:3" | "16:9" | "3:4" | "9:16"
+export type AspectRatio = "auto" | "1:1" | "4:3" | "3:2" | "16:9" | "21:9" | "3:4" | "2:3" | "9:16"
 
-export type ImageCount = 1 | 2 | 4
+/** Base values are the long edge in pixels; the short edge follows the ratio. */
+export type BaseResolution = 512 | 1024 | 1536 | 2048
 
 export type GenerationMode = "text" | "image"
 
-export type ImageModelCapabilities = {
-  textToImage: boolean
-  imageToImage: boolean
-  multipleReferences: boolean
-  maxReferences?: number
-  supportedAspectRatios: AspectRatio[]
-  supportedCounts: ImageCount[]
-}
-
-export type ImageModel = {
+/** A NewAPI endpoint the user configured. kunDraw never proxies or stores these remotely. */
+export type Channel = {
   id: string
   name: string
-  description?: string
-  recommended?: boolean
-  capabilities: ImageModelCapabilities
-  /**
-   * Maps a UI aspect ratio to the API's `size` field. Omit to send no `size` at all,
-   * which is how models that only accept fixed sizes are supported.
-   */
-  sizeMap?: Partial<Record<AspectRatio, string>>
-  /** Whether the gateway accepts `response_format`. Defaults to true. */
-  supportsResponseFormat?: boolean
-  /** Extra request fields, merged into the body only for this model. */
-  extraParams?: Record<string, unknown>
+  baseUrl: string
+  apiKey: string
+  /** Model ids discovered from this channel's `/models`, cached locally. */
+  models: string[]
 }
 
 export type ReferenceImage = {
@@ -40,9 +25,9 @@ export type ReferenceImage = {
 
 export type GeneratedImageSource = {
   prompt: string
-  modelId: string
-  modelName: string
-  aspectRatio: AspectRatio
+  model: string
+  channelName: string
+  mode: GenerationMode
   count: number
 }
 
@@ -62,7 +47,9 @@ export type AiError = {
 }
 
 export type GenerationSettings = {
-  modelId: string
+  model: string
+  mode: GenerationMode
   aspectRatio: AspectRatio
-  count: ImageCount
+  resolution: BaseResolution
+  count: number
 }

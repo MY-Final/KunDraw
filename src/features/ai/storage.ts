@@ -1,41 +1,47 @@
-import type { ImageResponseFormat, NewApiConfig } from "@/api/newapi/types"
+import { ASPECT_RATIOS, BASE_RESOLUTIONS, DEFAULT_SETTINGS, MAX_COUNT, MIN_COUNT, PROMPT_MAX_LENGTH } from "./constants"
+import { mergeModels, builtInModelIds } from "./models"
+import type { Channel, GenerationSettings } from "./types"
 
-import { ASPECT_RATIOS, IMAGE_COUNTS, PROMPT_MAX_LENGTH } from "./constants"
-import { DEFAULT_MODEL_ID } from "./models"
-import type { GenerationSettings } from "./types"
-
-const CONFIG_KEY = "kundraw.ai.config.v1"
-const DRAFT_KEY = "kundraw.ai.draft.v1"
+const CHANNELS_KEY = "kundraw.ai.channels.v1"
+const ACTIVE_CHANNEL_KEY = "kundraw.ai.active-channel.v1"
+const DRAFT_KEY = "kundraw.ai.prompt.v1"
 const SETTINGS_KEY = "kundraw.ai.settings.v1"
 
-export type StoredConfig = NewApiConfig & { remoteModels: string[] }
-
-export const emptyConfig: StoredConfig = {
-  baseUrl: "",
-  apiKey: "",
-  responseFormat: "b64_json",
-  remoteModels: [],
+export function createId(prefix: string) {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 }
 
-export const defaultSettings: GenerationSettings = {
-  modelId: DEFAULT_MODEL_ID,
-  aspectRatio: "1:1",
-  count: 1,
+export function createChannel(partial?: Partial<Channel>): Channel {
+  return {
+    id: partial?.id ?? createId("ch"),
+    name: partial?.name ?? "",
+    baseUrl: partial?.baseUrl ?? "",
+    apiKey: partial?.apiKey ?? "",
+    models: partial?.models ?? [],
+  }
 }
 
-function readObject<T extends object>(key: string, fallback: T): T {
+export function findChannel(channels: Channel[], id: string) {
+  return channels.find((channel) => channel.id === id) ?? channels[0] ?? null
+}
+
+/** Built-ins plus whatever the active channel reported. */
+export function modelsForChannel(channel: Channel | null): string[] {
+  return mergeModels(builtInModelIds, channel?.models ?? [])
+}
+
+function readJson<T>(key: string, fallback: T): T {
   try {
     const raw = window.localStorage.getItem(key)
     if (!raw) return fallback
     const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== "object") return fallback
-    return { ...fallback, ...(parsed as object) }
+    return parsed === null ? fallback : (parsed as T)
   } catch {
     return fallback
   }
 }
 
-function writeObject(key: string, value: unknown) {
+function writeJson(key: string, value: unknown) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value))
   } catch {
@@ -43,40 +49,85 @@ function writeObject(key: string, value: unknown) {
   }
 }
 
-export function loadConfig(): StoredConfig {
-  const stored = readObject(CONFIG_KEY, emptyConfig)
+function sanitizeChannel(raw: unknown): Channel | null {
+  if (!raw || typeof raw !== "object") return null
+  const record = raw as Record<string, unknown>
+  if (typeof record.id !== "string") return null
 
   return {
-    baseUrl: typeof stored.baseUrl === "string" ? stored.baseUrl : "",
-    apiKey: typeof stored.apiKey === "string" ? stored.apiKey : "",
-    responseFormat:
-      stored.responseFormat === "url" ? ("url" as ImageResponseFormat) : "b64_json",
-    remoteModels: Array.isArray(stored.remoteModels)
-      ? stored.remoteModels.filter((id): id is string => typeof id === "string")
+    id: record.id,
+    name: typeof record.name === "string" ? record.name : "",
+    baseUrl: typeof record.baseUrl === "string" ? record.baseUrl : "",
+    apiKey: typeof record.apiKey === "string" ? record.apiKey : "",
+    models: Array.isArray(record.models)
+      ? record.models.filter((id): id is string => typeof id === "string")
       : [],
   }
 }
 
-export function saveConfig(config: StoredConfig) {
-  writeObject(CONFIG_KEY, config)
+export function loadChannels(): Channel[] {
+  const stored = readJson<unknown[]>(CHANNELS_KEY, [])
+
+  if (Array.isArray(stored) && stored.length > 0) {
+    return stored
+      .map(sanitizeChannel)
+      .filter((channel): channel is Channel => channel !== null)
+  }
+
+  // Migrate the single-endpoint config used before channels existed.
+  const legacy = readJson<Record<string, unknown> | null>("kundraw.ai.config.v1", null)
+  if (legacy && typeof legacy.baseUrl === "string" && legacy.baseUrl) {
+    return [
+      createChannel({
+        name: "默认渠道",
+        baseUrl: legacy.baseUrl,
+        apiKey: typeof legacy.apiKey === "string" ? legacy.apiKey : "",
+        models: Array.isArray(legacy.remoteModels)
+          ? legacy.remoteModels.filter((id): id is string => typeof id === "string")
+          : [],
+      }),
+    ]
+  }
+
+  return []
+}
+
+export function saveChannels(channels: Channel[]) {
+  writeJson(CHANNELS_KEY, channels)
+}
+
+export function loadActiveChannelId(): string {
+  const stored = readJson<string>(ACTIVE_CHANNEL_KEY, "")
+  return typeof stored === "string" ? stored : ""
+}
+
+export function saveActiveChannelId(id: string) {
+  writeJson(ACTIVE_CHANNEL_KEY, id)
 }
 
 export function loadSettings(): GenerationSettings {
-  const stored = readObject(SETTINGS_KEY, defaultSettings)
+  const stored = readJson<Partial<GenerationSettings> | null>(SETTINGS_KEY, null)
+  if (!stored || typeof stored !== "object") return DEFAULT_SETTINGS
+
+  const count = Number(stored.count)
 
   return {
-    modelId: typeof stored.modelId === "string" && stored.modelId
-      ? stored.modelId
-      : defaultSettings.modelId,
-    aspectRatio: ASPECT_RATIOS.includes(stored.aspectRatio)
-      ? stored.aspectRatio
-      : defaultSettings.aspectRatio,
-    count: IMAGE_COUNTS.includes(stored.count) ? stored.count : defaultSettings.count,
+    model: typeof stored.model === "string" ? stored.model : "",
+    mode: stored.mode === "image" ? "image" : "text",
+    aspectRatio: ASPECT_RATIOS.includes(stored.aspectRatio as never)
+      ? (stored.aspectRatio as GenerationSettings["aspectRatio"])
+      : DEFAULT_SETTINGS.aspectRatio,
+    resolution: BASE_RESOLUTIONS.includes(stored.resolution as never)
+      ? (stored.resolution as GenerationSettings["resolution"])
+      : DEFAULT_SETTINGS.resolution,
+    count: Number.isFinite(count)
+      ? Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(count)))
+      : DEFAULT_SETTINGS.count,
   }
 }
 
 export function saveSettings(settings: GenerationSettings) {
-  writeObject(SETTINGS_KEY, settings)
+  writeJson(SETTINGS_KEY, settings)
 }
 
 export function loadPromptDraft(): string {

@@ -1,20 +1,22 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 
 import { AiContext, type AiContextValue } from "./context"
-import { MAX_REFERENCE_BYTES, MAX_REFERENCES, PROMPT_MAX_LENGTH } from "./constants"
+import { MAX_COUNT, MAX_REFERENCE_BYTES, MIN_COUNT, PROMPT_MAX_LENGTH } from "./constants"
 import { buildGenerationInput, runGeneration } from "./generate"
-import { resolveImageModels } from "./models"
 import {
-  emptyConfig,
-  loadConfig,
+  createId,
+  findChannel,
+  loadActiveChannelId,
+  loadChannels,
   loadPromptDraft,
   loadSettings,
-  saveConfig,
+  modelsForChannel,
+  saveActiveChannelId,
+  saveChannels,
   savePromptDraft,
   saveSettings,
-  type StoredConfig,
 } from "./storage"
-import type { GeneratedImage, GenerationSettings, ReferenceImage } from "./types"
+import type { Channel, GeneratedImage, GenerationSettings, ReferenceImage } from "./types"
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -25,14 +27,13 @@ function readFileAsDataUrl(file: File) {
   })
 }
 
-function createId(prefix: string) {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
-}
-
 export function AiProvider({ children }: { children: React.ReactNode }) {
-  const [config, setConfigState] = useState<StoredConfig>(() => {
-    const stored = loadConfig()
-    return stored.baseUrl || stored.apiKey ? stored : emptyConfig
+  const [channels, setChannelsState] = useState<Channel[]>(loadChannels)
+  const [activeChannelId, setActiveChannelIdState] = useState<string>(() => {
+    const stored = loadActiveChannelId()
+    if (stored) return stored
+    const [first] = loadChannels()
+    return first?.id ?? ""
   })
   const [prompt, setPromptState] = useState(() => loadPromptDraft())
   const [settings, setSettings] = useState<GenerationSettings>(loadSettings)
@@ -41,17 +42,24 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AiContextValue["status"]>("idle")
   const [error, setError] = useState<AiContextValue["error"]>(null)
 
-  // Guards against overlapping generations and keeps the async handler stable.
+  // Guards against overlapping generations.
   const generating = useRef(false)
 
-  const models = useMemo(
-    () => resolveImageModels(config.remoteModels),
-    [config.remoteModels]
+  const activeChannel = useMemo(
+    () => findChannel(channels, activeChannelId),
+    [activeChannelId, channels]
   )
 
-  const setConfig = useCallback((next: StoredConfig) => {
-    setConfigState(next)
-    saveConfig(next)
+  const models = useMemo(() => modelsForChannel(activeChannel), [activeChannel])
+
+  const setChannels = useCallback((next: Channel[]) => {
+    setChannelsState(next)
+    saveChannels(next)
+  }, [])
+
+  const setActiveChannelId = useCallback((id: string) => {
+    setActiveChannelIdState(id)
+    saveActiveChannelId(id)
   }, [])
 
   const setPrompt = useCallback((next: string) => {
@@ -62,20 +70,31 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
   const updateSettings = useCallback((patch: Partial<GenerationSettings>) => {
     setSettings((current) => {
-      const next = { ...current, ...patch }
+      const next = {
+        ...current,
+        ...patch,
+        count:
+          patch.count === undefined
+            ? current.count
+            : Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(patch.count))),
+      }
       saveSettings(next)
       return next
     })
   }, [])
 
+  /** Appends files; there is no fixed limit, only a per-file size guard. */
   const addReferences = useCallback(async (files: File[]) => {
-    const accepted = files.filter((file) => file.type.startsWith("image/"))
+    const images = files.filter((file) => file.type.startsWith("image/"))
+    if (images.length === 0) return
+
+    const tooLarge = images.find((file) => file.size > MAX_REFERENCE_BYTES)
+    if (tooLarge) {
+      throw new Error(`参考图过大（上限 ${Math.round(MAX_REFERENCE_BYTES / 1024 / 1024)}MB）：${tooLarge.name}`)
+    }
 
     const loaded = await Promise.all(
-      accepted.map(async (file) => {
-        if (file.size > MAX_REFERENCE_BYTES) {
-          throw new Error(`参考图过大：${file.name}`)
-        }
+      images.map(async (file) => {
         const dataUrl = await readFileAsDataUrl(file)
         return {
           id: createId("ref"),
@@ -87,7 +106,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       })
     )
 
-    setReferences((current) => [...current, ...loaded].slice(0, MAX_REFERENCES))
+    setReferences((current) => [...current, ...loaded])
   }, [])
 
   const removeReference = useCallback((id: string) => {
@@ -107,15 +126,21 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
     async (overrides?: Partial<GenerationSettings> & { prompt?: string }) => {
       if (generating.current) return
 
-      const nextSettings = { ...settings, ...overrides }
+      const nextSettings: GenerationSettings = { ...settings, ...overrides }
       const nextPrompt = (overrides?.prompt ?? prompt).trim()
+      const channel = activeChannel
+      const model = (nextSettings.model || models[0] || "").trim()
 
-      if (!config.baseUrl.trim()) {
+      if (!channel?.baseUrl.trim()) {
         setError({
           kind: "config",
-          title: "尚未配置 NewAPI 地址",
-          hints: ["打开右上角设置，填写 NewAPI 地址与 API Key"],
+          title: "尚未配置 NewAPI 渠道",
+          hints: ["打开右上角设置，添加一个渠道并填写地址与 API Key"],
         })
+        return
+      }
+      if (!model) {
+        setError({ kind: "input", title: "请选择或输入模型名称", hints: [] })
         return
       }
       if (!nextPrompt) {
@@ -129,13 +154,11 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const input = buildGenerationInput({
-          config,
-          models,
-          modelId: nextSettings.modelId,
+          channel,
+          model,
+          settings: nextSettings,
           prompt: nextPrompt,
-          aspectRatio: nextSettings.aspectRatio,
-          count: nextSettings.count,
-          references,
+          references: nextSettings.mode === "image" ? references : [],
         })
 
         const outcome = await runGeneration(input)
@@ -151,12 +174,13 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
         setStatus("idle")
       }
     },
-    [config, models, prompt, references, settings]
+    [activeChannel, models, prompt, references, settings]
   )
 
   const value = useMemo<AiContextValue>(
     () => ({
-      config,
+      channels,
+      activeChannel,
       models,
       prompt,
       references,
@@ -164,8 +188,9 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       results,
       status,
       error,
-      isConfigured: Boolean(config.baseUrl.trim()),
-      setConfig,
+      isConfigured: Boolean(activeChannel?.baseUrl.trim()),
+      setChannels,
+      setActiveChannelId,
       setPrompt,
       addReferences,
       removeReference,
@@ -177,7 +202,8 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       clearError,
     }),
     [
-      config,
+      channels,
+      activeChannel,
       models,
       prompt,
       references,
@@ -185,7 +211,8 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       results,
       status,
       error,
-      setConfig,
+      setChannels,
+      setActiveChannelId,
       setPrompt,
       addReferences,
       removeReference,
