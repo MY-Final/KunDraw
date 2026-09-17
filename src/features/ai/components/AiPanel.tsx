@@ -1,23 +1,14 @@
 import { useCallback } from "react"
-import { Image as ImageIcon, Sparkles, Type } from "lucide-react"
+import { Image as ImageIcon, Sparkles } from "lucide-react"
 import { useValue } from "tldraw"
 
-import { ChoiceGroup, type Choice } from "./ChoiceGroup"
-import { ChannelPicker } from "./ChannelPicker"
 import { ErrorNotice } from "./ErrorNotice"
+import { GenerationSettings } from "./GenerationSettings"
 import { GenerateButton } from "./GenerateButton"
-import { ModelPicker } from "./ModelPicker"
 import { PromptField } from "./PromptField"
 import { ReferenceImages } from "./ReferenceImages"
 import { ResultGallery } from "./ResultGallery"
-import { NumberInput } from "@/components/workspace/PropertyInput"
-import { PropertyRow } from "@/components/workspace/PropertySection"
 import {
-  ASPECT_RATIOS,
-  ASPECT_RATIO_LABELS,
-  BASE_RESOLUTIONS,
-  MAX_COUNT,
-  MIN_COUNT,
   computeSize,
 } from "../constants"
 import { useAi } from "../useAi"
@@ -33,12 +24,7 @@ import {
   type PromptShape,
 } from "@/features/canvas/shapeTypes"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
-import type { AspectRatio, BaseResolution, GeneratedImage, GenerationMode } from "../types"
-
-const MODE_CHOICES: Choice<GenerationMode>[] = [
-  { value: "text", label: "文生图", icon: <Type /> },
-  { value: "image", label: "图生图", icon: <ImageIcon /> },
-]
+import type { GeneratedImage } from "../types"
 
 export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
   const ai = useAi()
@@ -53,16 +39,6 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
     },
     [editor]
   )
-
-  const aspectChoices: Choice<AspectRatio>[] = ASPECT_RATIOS.map((ratio) => ({
-    value: ratio,
-    label: ASPECT_RATIO_LABELS[ratio],
-  }))
-
-  const resolutionChoices: Choice<string>[] = BASE_RESOLUTIONS.map((value) => ({
-    value: String(value),
-    label: `${value}P`,
-  }))
 
   const loading = ai.status === "generating"
   const panelMode = selectedPrompt?.props.mode ?? settings.mode
@@ -130,24 +106,15 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
 
   return (
     <div className="space-y-4 p-3">
-      <ChannelPicker onOpenSettings={onOpenSettings} disabled={loading} />
-
       {selectedPrompt ? (
-        <div className="flex items-center gap-2 rounded-md border border-brand/25 bg-brand-subtle px-2.5 py-2 text-[11px] text-brand">
-          <Sparkles className="size-3.5" />
-          正在配置画布中的 Prompt 节点
+        <div className="flex items-center gap-2 rounded-md border border-brand/25 bg-brand-subtle px-2.5 py-2 text-brand">
+          {selectedPrompt.props.mode === "image" ? <ImageIcon className="size-3.5" /> : <Sparkles className="size-3.5" />}
+          <div className="min-w-0">
+            <p className="text-xs font-medium">正在编辑画布中的{selectedPrompt.props.mode === "image" ? "图生图" : "文生图"}节点</p>
+            <p className="truncate text-[10px] text-brand/75">右侧修改会实时同步到当前节点{selectedPrompt.props.mode === "image" ? ` · ${panelReferences.length} 张参考图` : ""}</p>
+          </div>
         </div>
       ) : null}
-
-      <ChoiceGroup
-        ariaLabel="生成模式"
-        value={panelMode}
-        choices={MODE_CHOICES}
-        onChange={(mode) => {
-          if (!updateSelectedPrompt({ mode })) ai.updateSettings({ mode })
-        }}
-        disabled={loading}
-      />
 
       <PromptField
         prompt={panelPrompt}
@@ -190,58 +157,31 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
         </p>
       ) : null}
 
-      <ModelPicker
+      <GenerationSettings
+        mode={panelMode}
+        model={panelModel}
         models={ai.models}
-        value={panelModel}
-        onChange={(model) => {
+        aspectRatio={panelRatio}
+        resolution={panelResolution}
+        count={panelCount}
+        disabled={loading}
+        onOpenSettings={onOpenSettings}
+        onModeChange={(mode) => {
+          if (!updateSelectedPrompt({ mode })) ai.updateSettings({ mode })
+        }}
+        onModelChange={(model) => {
           if (!updateSelectedPrompt({ model })) ai.updateSettings({ model })
         }}
-        disabled={loading}
+        onAspectRatioChange={(aspectRatio) => {
+          if (!updateSelectedPrompt({ aspectRatio })) ai.updateSettings({ aspectRatio })
+        }}
+        onResolutionChange={(resolution) => {
+          if (!updateSelectedPrompt({ resolution })) ai.updateSettings({ resolution })
+        }}
+        onCountChange={(count) => {
+          if (!updateSelectedPrompt({ count })) ai.updateSettings({ count })
+        }}
       />
-
-      <div className="space-y-2">
-        <span className="text-xs font-medium text-foreground/80">比例</span>
-        <ChoiceGroup
-          ariaLabel="比例"
-          value={panelRatio}
-          choices={aspectChoices}
-          onChange={(aspectRatio) => {
-            if (!updateSelectedPrompt({ aspectRatio })) ai.updateSettings({ aspectRatio })
-          }}
-          disabled={loading}
-          wrap
-        />
-      </div>
-
-      <div className="space-y-2">
-        <span className="text-xs font-medium text-foreground/80">分辨率</span>
-        <ChoiceGroup
-          ariaLabel="分辨率"
-          value={String(panelResolution)}
-          choices={resolutionChoices}
-          onChange={(value) => {
-            const resolution = Number(value) as BaseResolution
-            if (!updateSelectedPrompt({ resolution })) ai.updateSettings({ resolution })
-          }}
-          disabled={loading}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <span className="text-xs font-medium text-foreground/80">数量</span>
-        <PropertyRow label="张数" hint={`≤ ${MAX_COUNT}`}>
-          <NumberInput
-            ariaLabel="数量"
-            value={panelCount}
-            min={MIN_COUNT}
-            max={MAX_COUNT}
-            disabled={loading}
-            onCommit={(count) => {
-              if (!updateSelectedPrompt({ count })) ai.updateSettings({ count })
-            }}
-          />
-        </PropertyRow>
-      </div>
 
       {!ai.isConfigured ? (
         <p className="flex flex-wrap items-center gap-x-1 gap-y-0.5 rounded-md border border-border bg-muted/50 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
