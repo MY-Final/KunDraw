@@ -84,7 +84,7 @@ export function toNewApiError(error: unknown): NewApiError {
   if (error instanceof TypeError) {
     return new NewApiError(
       "network",
-      "无法连接到 NewAPI，请检查地址与网络",
+      "浏览器无法访问该 NewAPI 地址",
       { detail: error.message }
     )
   }
@@ -128,7 +128,11 @@ function hintsFor(kind: NewApiErrorKind, context: "generate" | "models") {
     case "server":
       return ["稍后重试", "确认上游模型服务可用"]
     case "network":
-      return ["确认地址可访问", "确认浏览器允许跨域请求该地址"]
+      return [
+        "确认 NewAPI 地址可以直接从浏览器访问",
+        "第三方服务需允许当前站点跨域，并放行 GET、POST、OPTIONS",
+        "服务端需允许 Authorization 与 Content-Type 请求头",
+      ]
     case "timeout":
       return ["图片生成可能耗时较长，请稍后重试", "确认上游服务未卡住"]
     case "cancelled":
