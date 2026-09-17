@@ -1,8 +1,19 @@
 # kunDraw
 
+[![在线 Demo](https://img.shields.io/badge/Demo-online-2ea44f?logo=github)](https://my-final.github.io/KunDraw/)
+[![Deploy to GitHub Pages](https://github.com/MY-Final/KunDraw/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/MY-Final/KunDraw/actions/workflows/deploy-pages.yml)
+
 一个纯前端的 AI 绘图工作台：使用 [tldraw](https://tldraw.dev/) 提供无限画布，并通过用户自己的 NewAPI / OpenAI 兼容接口生成图片。
 
 kunDraw 没有后端、账号或计费系统。浏览器会直接请求你配置的 API 地址，生成结果可下载或添加到画布继续编辑。
+
+## 在线 Demo
+
+演示站在 **<https://my-final.github.io/KunDraw/>**（托管于 GitHub Pages），用来快速体验完整的「文生图 → 图生图 → 参考图」流程：
+
+- 演示站**不带任何渠道配置**，请先在右上角「设置」里填入你自己的 NewAPI 地址与 API Key。
+- 项目、画布、图片和渠道配置都保存在**你本机的浏览器**里（IndexedDB），不会上传到任何服务器；换浏览器或清除数据后即消失。
+- 演示站按 tldraw 的许可要求保留画布水印，请勿移除；公开部署属于生产环境，需要相应的 License Key（详见下方「许可」小节与 [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md)）。
 
 ## 功能
 
@@ -11,12 +22,13 @@ kunDraw 没有后端、账号或计费系统。浏览器会直接请求你配置
 - 文生图与图生图，可添加多张参考图
 - 多 NewAPI 渠道管理与连接测试
 - 自动读取 `/models`，同时支持手动输入未列出的模型 ID
-- 常用宽高比、512P–2048P 基准分辨率以及批量生成
+- 常用宽高比、512P / 1024P / 1536P / 2048P / 4K 基准分辨率以及批量生成（多张按网格排布）
 - 生成结果支持添加到画布、下载、重新生成和删除
-- 画布操作支持撤销与重做
+- 图片节点可继续创作、双击预览；顶部支持把当前页面导出为 PNG
+- 画布操作支持撤销与重做，多标签页打开同一项目时第二个标签页为只读并自动接管
 - 项目名称、渠道配置、提示词草稿和生成设置保存在浏览器本地
 
-> 项目、画布、节点关系和图片都保存在浏览器本地数据库（IndexedDB），刷新或重开浏览器后会自动恢复最近的项目。顶部“导出”入口目前尚未实现。
+> 项目、画布、节点关系和图片都保存在浏览器本地数据库（IndexedDB），刷新或重开浏览器后会自动恢复最近的项目。
 
 ## 技术栈
 
