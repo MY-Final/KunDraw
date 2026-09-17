@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/select"
 import { cn } from "cn"
 
+import { LocalDataSection } from "@/features/persistence/components/LocalDataSection"
+
 import { createChannel } from "../storage"
 import type { Channel } from "../types"
 import { useAi } from "../useAi"
@@ -271,6 +273,8 @@ function ChannelsForm({ onClose }: { onClose: () => void }) {
             还没有渠道，点击右上角 + 新增一个。
           </p>
         )}
+
+        <LocalDataSection />
       </div>
 
       <DialogFooter>

@@ -39,7 +39,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const projectIdRef = useRef(project.id)
   const switchingRef = useRef(false)
   const restoredRef = useRef(false)
-  const autosaveRef = useRef<{ flush: () => Promise<void>; cancel: () => void } | null>(null)
+  const autosaveRef = useRef<{
+    flush: () => Promise<void>
+    /** Resolves once an in-flight save finished, without starting a new one. */
+    settle: () => Promise<void>
+    cancel: () => void
+  } | null>(null)
 
   useEffect(() => {
     if (!editor || restoredRef.current) return
@@ -119,7 +124,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       await save()
     }
 
-    autosaveRef.current = { flush, cancel }
+    autosaveRef.current = { flush, settle: () => saveChain, cancel }
 
     const schedule = () => {
       if (switchingRef.current) return
@@ -209,11 +214,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const deleteProject = useCallback(
     async (id: string) => {
       if (!editor) return
+      const autosave = autosaveRef.current
       const remaining = projects.filter((item) => item.id !== id)
 
+      autosave?.cancel()
+
       if (id === projectIdRef.current) {
-        autosaveRef.current?.cancel()
+        // Let the doomed project's in-flight save finish before it is deleted.
+        await autosave?.settle()
         await openProject(remaining[0] ?? (await createProjectRecord()))
+      } else {
+        // Keep the live project referenced before its assets are collected.
+        await autosave?.flush()
       }
 
       await removeProjectRecord(id)
@@ -224,15 +236,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const clearAllLocalData = useCallback(async () => {
     if (!editor) return
-    autosaveRef.current?.cancel()
+    const autosave = autosaveRef.current
+    autosave?.cancel()
     switchingRef.current = true
 
     try {
+      await autosave?.settle()
       await clearRecords(CANVASES_STORE)
       await clearRecords(PROJECTS_STORE)
       await clearRecords(ASSETS_STORE)
-      releaseAllRuntimeUrls()
       clearCanvasContent(editor)
+      releaseAllRuntimeUrls()
 
       const created = await createProjectRecord()
       await writeCurrentProjectId(created.id)

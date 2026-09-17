@@ -1,3 +1,5 @@
+import { hydrateAiSettings } from "@/features/ai/storage"
+
 import { listProjects, resolveStartupProject, type Project } from "./projects"
 
 export type StartupState = {
@@ -12,6 +14,8 @@ let startup: StartupState | null = null
  * available synchronously. Storage failures keep kunDraw usable without saving.
  */
 export async function bootPersistence() {
+  await hydrateAiSettings()
+
   try {
     const project = await resolveStartupProject()
     startup = { project, projects: await listProjects() }

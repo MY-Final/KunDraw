@@ -105,22 +105,25 @@ function withStoredAssetSources(record: TLRecord): TLRecord {
 }
 
 async function withRuntimeAssetSources(record: TLRecord): Promise<TLRecord> {
-  const readAssetSrc = (src: string | null | undefined) => {
+  // A missing blob resolves to an empty source so the node shows its placeholder
+  // instead of pointing at a reference the browser cannot load.
+  const readAssetSrc = async (src: string | null | undefined) => {
     const assetId = assetIdFromSrc(src)
-    return assetId ? ensureRuntimeUrl(assetId) : null
+    if (!assetId) return src ?? ""
+    return (await ensureRuntimeUrl(assetId)) ?? ""
   }
 
   if (isImageAsset(record)) {
-    const runtimeUrl = await readAssetSrc(record.props.src)
-    return runtimeUrl === null ? record : { ...record, props: { ...record.props, src: runtimeUrl } }
+    const src = await readAssetSrc(record.props.src)
+    return src === record.props.src ? record : { ...record, props: { ...record.props, src } }
   }
 
   if (record.typeName === "shape" && record.type === IMAGE_SHAPE_TYPE) {
     const shape = record as ImageShape
-    const runtimeUrl = await readAssetSrc(shape.props.imageUrl)
-    return runtimeUrl === null
+    const imageUrl = await readAssetSrc(shape.props.imageUrl)
+    return imageUrl === shape.props.imageUrl
       ? record
-      : { ...shape, props: { ...shape.props, imageUrl: runtimeUrl } }
+      : { ...shape, props: { ...shape.props, imageUrl } }
   }
 
   return record
