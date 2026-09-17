@@ -6,9 +6,11 @@ import {
   type TLShape,
 } from "tldraw"
 
+import { IMAGE_SHAPE_TYPE, type ImageShape } from "@/features/canvas/shapeTypes"
+
 import { ColorSwatches } from "./ColorInput"
 import { OptionSelect } from "./OptionInput"
-import { PropertyRow, PropertySection, PropertyStack } from "./PropertySection"
+import { PropertyRow, PropertySection, PropertyStack, PropertyText } from "./PropertySection"
 import { fillLabel, fillOptions, sizeLabel, sizeOptions } from "./shapeLabels"
 import { EndpointSection, TextSection } from "./TextPropertySections"
 import { setSharedStyle, type Styles } from "./shapeProps"
@@ -77,7 +79,30 @@ function StrokeSection({ editor, styles }: StyleSectionProps) {
   )
 }
 
+function ImageInfoSection({ shape }: { shape: ImageShape }) {
+  const { model, prompt, createdAt } = shape.props
+  const date = new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" })
+
+  return (
+    <PropertySection title="生成信息" className="grid-cols-1">
+      <PropertyText label="模型" value={model || "本地图片"} />
+      <PropertyText label="时间" value={date.format(createdAt)} />
+      {prompt ? (
+        <PropertyStack label="提示词">
+          <p className="max-h-28 overflow-auto rounded-md border border-border bg-muted/40 px-2 py-1.5 text-[11px] leading-relaxed whitespace-pre-wrap text-foreground/80">
+            {prompt}
+          </p>
+        </PropertyStack>
+      ) : null}
+    </PropertySection>
+  )
+}
+
 function ShapePropertySections({ editor, shape, styles }: ShapeSectionProps) {
+  if (shape.type === IMAGE_SHAPE_TYPE) {
+    return <ImageInfoSection shape={shape as ImageShape} />
+  }
+
   if (shape.type === "geo") {
     return (
       <>
