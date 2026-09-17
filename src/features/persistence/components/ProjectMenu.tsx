@@ -14,6 +14,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -89,19 +90,21 @@ export function ProjectMenu({ onClearCanvas }: { onClearCanvas: () => void }) {
           <DropdownMenuItem onClick={startRenaming}>重命名</DropdownMenuItem>
 
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-[10px] text-muted-foreground">
-            最近项目
-          </DropdownMenuLabel>
-          {projects.slice(0, MAX_RECENT_PROJECTS).map((item) => (
-            <DropdownMenuItem
-              key={item.id}
-              disabled={item.id === project.id}
-              onClick={() => void switchProject(item.id)}
-            >
-              <span className="truncate">{item.name}</span>
-              {item.id === project.id ? <Check className="ml-auto size-3.5" /> : null}
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="text-[10px] text-muted-foreground">
+              最近项目
+            </DropdownMenuLabel>
+            {projects.slice(0, MAX_RECENT_PROJECTS).map((item) => (
+              <DropdownMenuItem
+                key={item.id}
+                disabled={item.id === project.id}
+                onClick={() => void switchProject(item.id)}
+              >
+                <span className="truncate">{item.name}</span>
+                {item.id === project.id ? <Check className="ml-auto size-3.5" /> : null}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
 
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={onClearCanvas}>
@@ -126,7 +129,10 @@ export function ProjectMenu({ onClearCanvas }: { onClearCanvas: () => void }) {
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={() => void deleteProject(project.id)}
+              onClick={() => {
+                setRenaming(false)
+                void deleteProject(project.id)
+              }}
             >
               删除
             </AlertDialogAction>

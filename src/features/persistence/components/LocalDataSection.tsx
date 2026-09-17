@@ -48,7 +48,10 @@ export function LocalDataSection() {
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={() => void clearAllLocalData()}
+              onClick={() => {
+                setConfirming(false)
+                void clearAllLocalData()
+              }}
             >
               清除
             </AlertDialogAction>
