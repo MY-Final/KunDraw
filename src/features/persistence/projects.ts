@@ -1,5 +1,6 @@
 import { collectReferencedAssetIds, deleteProjectCanvas } from "./canvasStorage"
 import { deleteStoredAssets } from "./assets"
+import { clearProjectResults } from "./resultStore"
 import {
   ASSETS_STORE,
   META_STORE,
@@ -74,6 +75,7 @@ async function collectOrphanAssets() {
 
 export async function removeProjectRecord(id: string) {
   await deleteProjectCanvas(id)
+  await clearProjectResults(id)
   await deleteRecord(PROJECTS_STORE, id)
   await collectOrphanAssets()
 }

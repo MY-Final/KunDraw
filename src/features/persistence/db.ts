@@ -4,11 +4,12 @@
  */
 
 const DB_NAME = "kundraw"
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const PROJECTS_STORE = "projects"
 export const CANVASES_STORE = "canvases"
 export const ASSETS_STORE = "assets"
+export const RESULTS_STORE = "results"
 export const SETTINGS_STORE = "settings"
 export const META_STORE = "meta"
 
@@ -16,6 +17,7 @@ const STORE_KEY_PATHS: Array<[string, string]> = [
   [PROJECTS_STORE, "id"],
   [CANVASES_STORE, "projectId"],
   [ASSETS_STORE, "id"],
+  [RESULTS_STORE, "id"],
   [SETTINGS_STORE, "key"],
   [META_STORE, "key"],
 ]

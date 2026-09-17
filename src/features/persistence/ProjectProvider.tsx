@@ -7,7 +7,13 @@ import { normalizeDefaultPageName } from "@/features/canvas/pages"
 import { getStartupState } from "./boot"
 import { clearCanvasContent, loadProjectCanvas, saveProjectCanvas } from "./canvasStorage"
 import { ProjectContext, type ProjectContextValue } from "./context"
-import { ASSETS_STORE, CANVASES_STORE, PROJECTS_STORE, clearRecords } from "./db"
+import {
+  ASSETS_STORE,
+  CANVASES_STORE,
+  PROJECTS_STORE,
+  RESULTS_STORE,
+  clearRecords,
+} from "./db"
 import {
   DEFAULT_PROJECT_NAME,
   createProjectId,
@@ -309,6 +315,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       await clearRecords(CANVASES_STORE)
       await clearRecords(PROJECTS_STORE)
       await clearRecords(ASSETS_STORE)
+      await clearRecords(RESULTS_STORE)
       clearCanvasContent(editor)
 
       const created = await createProjectRecord()

@@ -118,11 +118,11 @@ function Workspace() {
 function App() {
   return (
     <EditorProvider>
-      <AiProvider>
-        <ProjectProvider>
+      <ProjectProvider>
+        <AiProvider>
           <Workspace />
-        </ProjectProvider>
-      </AiProvider>
+        </AiProvider>
+      </ProjectProvider>
     </EditorProvider>
   )
 }

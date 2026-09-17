@@ -1,6 +1,15 @@
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { NewApiClient } from "@/api/newapi/client"
+import {
+  MAX_STORED_RESULTS,
+  clearProjectResults,
+  deleteStoredResult,
+  loadProjectResults,
+  pruneProjectResults,
+  saveResult,
+} from "@/features/persistence/resultStore"
+import { useProject } from "@/features/persistence/useProject"
 
 import { AiContext, type AiContextValue } from "./context"
 import { MAX_COUNT, MAX_REFERENCE_BYTES, MIN_COUNT, PROMPT_MAX_LENGTH } from "./constants"
@@ -29,7 +38,16 @@ function readFileAsDataUrl(file: File) {
   })
 }
 
+/** Newest first, de-duplicated by id, capped for memory and storage. */
+function mergeResults(primary: GeneratedImage[], extra: GeneratedImage[]) {
+  const seen = new Set(primary.map((image) => image.id))
+  return [...primary, ...extra.filter((image) => !seen.has(image.id))]
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, MAX_STORED_RESULTS)
+}
+
 export function AiProvider({ children }: { children: React.ReactNode }) {
+  const { project } = useProject()
   const [channels, setChannelsState] = useState<Channel[]>(loadChannels)
   const [activeChannelId, setActiveChannelIdState] = useState<string>(() => {
     const stored = loadActiveChannelId()
@@ -46,6 +64,27 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
   // Guards against overlapping generations.
   const generating = useRef(false)
+  // Results generated in this session, so a slow load cannot drop them.
+  const sessionResults = useRef<GeneratedImage[]>([])
+
+  const projectId = project.id
+
+  // The gallery is stored per project, so switching projects swaps the results.
+  useEffect(() => {
+    let cancelled = false
+    sessionResults.current = []
+
+    void loadProjectResults(projectId)
+      .then((stored) => {
+        if (cancelled) return
+        setResults(mergeResults(stored, sessionResults.current))
+      })
+      .catch((error) => console.error("[kunDraw] 读取生成结果失败", error))
+
+    return () => {
+      cancelled = true
+    }
+  }, [projectId])
 
   const activeChannel = useMemo(
     () => findChannel(channels, activeChannelId),
@@ -134,9 +173,17 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
   const removeResult = useCallback((id: string) => {
     setResults((current) => current.filter((image) => image.id !== id))
+    void deleteStoredResult(id).catch((error) =>
+      console.error("[kunDraw] 删除生成结果失败", error)
+    )
   }, [])
 
-  const clearResults = useCallback(() => setResults([]), [])
+  const clearResults = useCallback(() => {
+    setResults([])
+    void clearProjectResults(projectId).catch((error) =>
+      console.error("[kunDraw] 清空生成结果失败", error)
+    )
+  }, [projectId])
   const clearError = useCallback(() => setError(null), [])
 
   const generate = useCallback(
@@ -191,14 +238,20 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
           return []
         }
 
-        setResults((current) => [...outcome.images, ...current])
+        sessionResults.current = mergeResults(outcome.images, sessionResults.current)
+        setResults((current) => mergeResults(outcome.images, current))
+
+        void Promise.all(outcome.images.map((image) => saveResult(projectId, image)))
+          .then(() => pruneProjectResults(projectId))
+          .catch((error) => console.error("[kunDraw] 保存生成结果失败", error))
+
         return outcome.images
       } finally {
         generating.current = false
         setStatus("idle")
       }
     },
-    [activeChannel, prompt, references, settings]
+    [activeChannel, projectId, prompt, references, settings]
   )
 
   const value = useMemo<AiContextValue>(
