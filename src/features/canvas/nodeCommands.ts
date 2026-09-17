@@ -64,12 +64,23 @@ export function createReferencePrompt(editor: Editor, imageShapeId: TLShapeId) {
   if (!image || image.type !== IMAGE_SHAPE_TYPE) return null
 
   const promptDefaults = editor.getShapeUtil<PromptShape>(PROMPT_SHAPE_TYPE).getDefaultProps()
+  const sourcePrompt = image.props.sourcePromptId
+    ? editor.getShape<PromptShape>(image.props.sourcePromptId as TLShapeId)
+    : null
+  const previous = sourcePrompt?.type === PROMPT_SHAPE_TYPE ? sourcePrompt : null
   const promptId = createPromptNode(editor, {
     point: {
       x: image.x + Math.max(image.props.w - promptDefaults.w, 0) / 2,
       y: image.y + image.props.h + NODE_GAP,
     },
-    props: { referenceImages: [image.id], mode: "image" },
+    props: {
+      referenceImages: [image.id],
+      mode: "image",
+      model: image.props.model || previous?.props.model || promptDefaults.model,
+      aspectRatio: previous?.props.aspectRatio ?? promptDefaults.aspectRatio,
+      resolution: previous?.props.resolution ?? promptDefaults.resolution,
+      count: previous?.props.count ?? promptDefaults.count,
+    },
   })
   createRelation(editor, image.id, promptId, "reference")
   return promptId

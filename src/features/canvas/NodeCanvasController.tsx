@@ -38,7 +38,7 @@ export function NodeCanvasController() {
         })
         return
       }
-      if (action.type === "create-reference-prompt") {
+      if (action.type === "continue-from-image") {
         createReferencePrompt(editor, action.shapeId)
         return
       }
