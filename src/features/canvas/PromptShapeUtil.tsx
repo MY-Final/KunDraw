@@ -7,7 +7,7 @@ const DEFAULT_PROPS: PromptShapeProps = {
   w: 340,
   h: 430,
   prompt: "",
-  model: "images-2.5",
+  model: "",
   mode: "text",
   aspectRatio: "1:1",
   resolution: 1024,

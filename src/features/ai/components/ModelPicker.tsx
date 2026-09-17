@@ -90,7 +90,10 @@ export function ModelPicker({
             />
             <div className="flex items-center justify-between gap-2 border-b border-border px-2 py-1.5">
               <span className="text-[10px] text-muted-foreground">
-                {notice ?? `当前有 ${models.length} 个可选模型`}
+                {notice ??
+                  (models.length > 0
+                    ? `已获取 ${models.length} 个模型`
+                    : "尚未获取模型列表")}
               </span>
               {onRefresh ? (
                 <Button
@@ -108,7 +111,9 @@ export function ModelPicker({
             </div>
             <CommandList>
               <CommandEmpty>
-                {trimmed ? `使用 “${trimmed}”` : "没有模型，请先在设置中测试连接"}
+                {trimmed
+                  ? `使用 “${trimmed}”`
+                  : "可直接输入模型名称，或点击刷新列表"}
               </CommandEmpty>
               <CommandGroup>
                 {canUseTyped ? (

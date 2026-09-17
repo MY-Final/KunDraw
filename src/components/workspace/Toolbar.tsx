@@ -32,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useAi } from "@/features/ai/useAi"
 import { createPromptNode } from "@/features/canvas/nodeCommands"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
@@ -80,6 +81,7 @@ function ToolButton({ label, shortcut, icon: Icon, active, disabled, accent, onC
 
 function Toolbar({ onOpenAi }: { onOpenAi: () => void }) {
   const editor = useWorkspaceEditor()
+  const ai = useAi()
   const imageInputRef = useRef<HTMLInputElement>(null)
 
   const activeTool = useValue(
@@ -140,7 +142,9 @@ function Toolbar({ onOpenAi }: { onOpenAi: () => void }) {
           icon={Sparkles}
           disabled={!editor}
           accent
-          onClick={() => editor && createPromptNode(editor)}
+          onClick={() =>
+            editor && createPromptNode(editor, { props: { model: ai.settings.model } })
+          }
         />
         <ToolButton
           label="添加图片"

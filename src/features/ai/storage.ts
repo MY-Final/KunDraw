@@ -1,5 +1,4 @@
 import { ASPECT_RATIOS, BASE_RESOLUTIONS, DEFAULT_SETTINGS, MAX_COUNT, MIN_COUNT, PROMPT_MAX_LENGTH } from "./constants"
-import { mergeModels, builtInModelIds } from "./models"
 import type { Channel, GenerationSettings } from "./types"
 
 const CHANNELS_KEY = "kundraw.ai.channels.v1"
@@ -25,9 +24,14 @@ export function findChannel(channels: Channel[], id: string) {
   return channels.find((channel) => channel.id === id) ?? channels[0] ?? null
 }
 
-/** Built-ins plus whatever the active channel reported. */
+function normalizeModels(models: readonly string[]): string[] {
+  const ids = models.map((id) => id.trim()).filter(Boolean)
+  return Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b))
+}
+
+/** Models come only from what the channel reported; kunDraw ships no built-in ids. */
 export function modelsForChannel(channel: Channel | null): string[] {
-  return mergeModels(builtInModelIds, channel?.models ?? [])
+  return normalizeModels(channel?.models ?? [])
 }
 
 function readJson<T>(key: string, fallback: T): T {
@@ -60,7 +64,7 @@ function sanitizeChannel(raw: unknown): Channel | null {
     baseUrl: typeof record.baseUrl === "string" ? record.baseUrl : "",
     apiKey: typeof record.apiKey === "string" ? record.apiKey : "",
     models: Array.isArray(record.models)
-      ? record.models.filter((id): id is string => typeof id === "string")
+      ? normalizeModels(record.models.filter((id): id is string => typeof id === "string"))
       : [],
   }
 }

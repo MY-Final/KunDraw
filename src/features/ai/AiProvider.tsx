@@ -151,7 +151,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       const nextSettings: GenerationSettings = { ...settings, ...overrides }
       const nextPrompt = (overrides?.prompt ?? prompt).trim()
       const channel = activeChannel
-      const model = (nextSettings.model || models[0] || "").trim()
+      const model = nextSettings.model.trim()
 
       if (!channel?.baseUrl.trim()) {
         setError({
@@ -198,7 +198,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
         setStatus("idle")
       }
     },
-    [activeChannel, models, prompt, references, settings]
+    [activeChannel, prompt, references, settings]
   )
 
   const value = useMemo<AiContextValue>(

@@ -130,15 +130,16 @@ function hintsFor(kind: NewApiErrorKind, context: "generate" | "models") {
     case "network":
       return context === "generate"
         ? [
+            "控制台若提示 Access-Control-Allow-Origin 与当前地址不符，说明渠道限制了跨域来源，需放行 kunDraw 的访问域名",
             "若 Network 显示 524，表示网关等待上游生成超时，并非普通跨域失败",
             "可减少生成张数、分辨率或参考图数量后重试",
             "接口方需缩短生成耗时、提高代理超时，或改用异步任务查询",
-            "错误响应仍需携带 CORS 头，否则浏览器无法读取具体状态",
           ]
         : [
             "确认 NewAPI 地址可以直接从浏览器访问",
             "第三方服务需允许当前站点跨域，并放行 GET、POST、OPTIONS",
             "服务端需允许 Authorization 与 Content-Type 请求头",
+            "控制台若提示 Access-Control-Allow-Origin 与当前地址不符，说明渠道限制了跨域来源",
           ]
     case "timeout":
       return ["客户端已等待 10 分钟仍未收到结果", "确认上游服务未卡住，或降低生成负载后重试"]

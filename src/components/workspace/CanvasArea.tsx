@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react"
 import { Tldraw, useValue, type Editor, type TLShape, type TldrawOptions } from "tldraw"
 
 import { Button } from "@/components/ui/button"
+import { useAi } from "@/features/ai/useAi"
 import { ImageShapeUtil } from "@/features/canvas/ImageShapeUtil"
 import { createPromptNode } from "@/features/canvas/nodeCommands"
 import { PromptShapeUtil } from "@/features/canvas/PromptShapeUtil"
@@ -23,6 +24,7 @@ const shapeUtils = [PromptShapeUtil, ImageShapeUtil]
 
 function CanvasEmptyState() {
   const editor = useWorkspaceEditor()
+  const ai = useAi()
   const isEmpty = useValue(
     "kundraw empty canvas",
     () => (editor ? editor.getCurrentPageShapes().length === 0 : false),
@@ -44,7 +46,9 @@ function CanvasEmptyState() {
         <Button
           size="sm"
           className="bg-brand text-brand-foreground hover:bg-brand/90"
-          onClick={() => createPromptNode(editor)}
+          onClick={() =>
+            createPromptNode(editor, { props: { model: ai.settings.model } })
+          }
         >
           <Sparkles />
           创建 Prompt

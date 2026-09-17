@@ -59,7 +59,11 @@ export function createPromptNode(
   return id
 }
 
-export function createReferencePrompt(editor: Editor, imageShapeId: TLShapeId) {
+export function createReferencePrompt(
+  editor: Editor,
+  imageShapeId: TLShapeId,
+  fallbackModel = ""
+) {
   const image = editor.getShape<ImageShape>(imageShapeId)
   if (!image || image.type !== IMAGE_SHAPE_TYPE) return null
 
@@ -76,7 +80,7 @@ export function createReferencePrompt(editor: Editor, imageShapeId: TLShapeId) {
     props: {
       referenceImages: [image.id],
       mode: "image",
-      model: image.props.model || previous?.props.model || promptDefaults.model,
+      model: image.props.model || previous?.props.model || fallbackModel,
       aspectRatio: previous?.props.aspectRatio ?? promptDefaults.aspectRatio,
       resolution: previous?.props.resolution ?? promptDefaults.resolution,
       count: previous?.props.count ?? promptDefaults.count,

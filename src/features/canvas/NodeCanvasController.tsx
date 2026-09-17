@@ -41,7 +41,7 @@ export function NodeCanvasController() {
         return
       }
       if (action.type === "continue-from-image") {
-        createReferencePrompt(editor, action.shapeId)
+        createReferencePrompt(editor, action.shapeId, ai.settings.model)
         return
       }
       if (action.type === "preview-image") {
@@ -98,7 +98,7 @@ export function NodeCanvasController() {
         return
       }
       event.preventDefault()
-      createPromptNode(editor)
+      createPromptNode(editor, { props: { model: ai.settings.model } })
     }
     window.addEventListener("keydown", onKeyDown)
 
