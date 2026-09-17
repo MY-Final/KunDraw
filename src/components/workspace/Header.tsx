@@ -15,6 +15,7 @@ import { useValue } from "tldraw"
 
 import { Button } from "@/components/ui/button"
 import { exportCanvasAsPng } from "@/features/canvas/exportCanvas"
+import { PageMenu } from "@/components/workspace/PageMenu"
 import { ProjectMenu } from "@/features/persistence/components/ProjectMenu"
 import { SaveStatusIndicator } from "@/features/persistence/components/SaveStatusIndicator"
 import { useProject } from "@/features/persistence/useProject"
@@ -72,8 +73,10 @@ function Header({
         <span className="text-sm font-semibold tracking-tight">kunDraw</span>
       </div>
 
-      <div className="flex flex-1 justify-center">
+      <div className="flex flex-1 items-center justify-center gap-2">
         <ProjectMenu onClearCanvas={onClearCanvas} />
+        <span className="hidden h-5 w-px bg-border sm:block" />
+        <PageMenu />
       </div>
 
       <div className="flex items-center gap-1">
