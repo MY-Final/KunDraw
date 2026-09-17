@@ -20,7 +20,6 @@ import { AiSettingsDialog } from "@/features/ai/components/AiSettingsDialog"
 import { NodeCanvasController } from "@/features/canvas/NodeCanvasController"
 import { ProjectProvider } from "@/features/persistence/ProjectProvider"
 import { EditorProvider, useWorkspaceEditor } from "@/hooks/useEditor"
-import { useProjectName } from "@/hooks/useProjectName"
 
 function ClearCanvasDialog({
   open,
@@ -62,7 +61,6 @@ function ClearCanvasDialog({
 
 function Workspace() {
   const editor = useWorkspaceEditor()
-  const { name, rename } = useProjectName()
   const [panelOpen, setPanelOpen] = useState(true)
   const [panelTab, setPanelTab] = useState<RightPanelTab>("ai")
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -80,8 +78,6 @@ function Workspace() {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
       <Header
-        projectName={name}
-        onRenameProject={rename}
         onClearCanvas={() => setClearOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
         panelOpen={panelOpen}
