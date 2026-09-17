@@ -76,7 +76,10 @@ StatusBar                              (32px)
 | `src/api/newapi/images.ts` | Images API: generations (JSON) and edits (multipart) |
 | `src/api/newapi/errors.ts` | Status → `NewApiError` mapping and user-facing hints |
 | `src/api/newapi/types.ts` | OpenAI-compatible request/response shapes |
-| `src/features/ai/AiProvider.tsx` | AI state: channels, prompt, references, settings, results, status |
+| `src/features/ai/AiProvider.tsx` | Composes the AI hooks with prompt, settings and generation state; provides `AiContext` |
+| `src/features/ai/useChannels.ts` | Channel list, active channel, discovered models and `refreshModels` |
+| `src/features/ai/useReferences.ts` | Reference images: file guard and read, add, remove, role change, clear |
+| `src/features/ai/useResults.ts` | Per-project gallery: load, merge, persist, prune, delete, clear |
 | `src/features/ai/constants.ts` | Ratios, resolutions, count bounds + `computeSize()` |
 | `src/features/ai/generate.ts` | Request assembly + generation orchestration |
 | `src/features/ai/canvas.ts` | `addImageToCanvas()` and image download |
