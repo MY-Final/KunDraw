@@ -1,4 +1,5 @@
 import { cn } from "cn"
+import { useValue } from "tldraw"
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -8,15 +9,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useWorkspaceEditor } from "@/hooks/useEditor"
 
-import { tools, type ToolId } from "./tools"
+import { activateTool, getActiveToolId, tools } from "./tools"
 
-type ToolbarProps = {
-  activeTool: ToolId
-  onToolChange: (tool: ToolId) => void
-}
+function Toolbar() {
+  const editor = useWorkspaceEditor()
 
-function Toolbar({ activeTool, onToolChange }: ToolbarProps) {
+  const activeTool = useValue(
+    "kundraw active tool",
+    () => (editor ? getActiveToolId(editor) : null),
+    [editor]
+  )
+
   return (
     <TooltipProvider delay={400}>
       <aside
@@ -45,7 +50,8 @@ function Toolbar({ activeTool, onToolChange }: ToolbarProps) {
                       size="icon"
                       aria-label={tool.label}
                       aria-pressed={isActive}
-                      onClick={() => onToolChange(tool.id)}
+                      disabled={!editor}
+                      onClick={() => editor && activateTool(editor, tool)}
                       className={cn(
                         "size-9 rounded-md text-muted-foreground hover:text-foreground",
                         isActive &&

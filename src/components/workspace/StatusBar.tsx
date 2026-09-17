@@ -1,25 +1,33 @@
 import { Maximize, ZoomIn, ZoomOut } from "lucide-react"
+import { useValue } from "tldraw"
 
 import { Button } from "@/components/ui/button"
+import { useWorkspaceEditor } from "@/hooks/useEditor"
 
-import { tools, type ToolId } from "./tools"
+import { getActiveToolId, tools } from "./tools"
 
-type StatusBarProps = {
-  activeTool: ToolId
-  zoom: number
-  onZoomIn: () => void
-  onZoomOut: () => void
-  onZoomReset: () => void
-}
+function StatusBar() {
+  const editor = useWorkspaceEditor()
 
-function StatusBar({
-  activeTool,
-  zoom,
-  onZoomIn,
-  onZoomOut,
-  onZoomReset,
-}: StatusBarProps) {
-  const tool = tools.find((item) => item.id === activeTool) ?? tools[0]
+  const zoom = useValue(
+    "kundraw zoom",
+    () => (editor ? editor.getZoomLevel() : 1),
+    [editor]
+  )
+
+  const activeToolId = useValue(
+    "kundraw status tool",
+    () => (editor ? getActiveToolId(editor) : null),
+    [editor]
+  )
+
+  const selectionCount = useValue(
+    "kundraw status selection",
+    () => (editor ? editor.getSelectedShapeIds().length : 0),
+    [editor]
+  )
+
+  const tool = tools.find((item) => item.id === activeToolId) ?? tools[0]
   const Icon = tool.icon
 
   return (
@@ -28,7 +36,11 @@ function StatusBar({
         <Icon className="size-3.5 shrink-0" />
         <span className="shrink-0 text-foreground/80">{tool.label}</span>
         <span className="hidden sm:inline">·</span>
-        <span className="hidden truncate sm:inline">未选择任何元素</span>
+        <span className="hidden truncate sm:inline">
+          {selectionCount === 0
+            ? "未选择任何元素"
+            : `已选择 ${selectionCount} 个元素`}
+        </span>
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5">
@@ -37,7 +49,8 @@ function StatusBar({
           size="icon-xs"
           aria-label="缩小"
           title="缩小"
-          onClick={onZoomOut}
+          disabled={!editor}
+          onClick={() => editor?.zoomOut()}
         >
           <ZoomOut />
         </Button>
@@ -49,7 +62,8 @@ function StatusBar({
           size="icon-xs"
           aria-label="放大"
           title="放大"
-          onClick={onZoomIn}
+          disabled={!editor}
+          onClick={() => editor?.zoomIn()}
         >
           <ZoomIn />
         </Button>
@@ -60,7 +74,9 @@ function StatusBar({
           variant="ghost"
           size="xs"
           className="gap-1"
-          onClick={onZoomReset}
+          disabled={!editor}
+          title="适应内容"
+          onClick={() => editor?.zoomToFit()}
         >
           <Maximize className="size-3.5" />
           适应画布

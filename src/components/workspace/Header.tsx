@@ -7,10 +7,26 @@ import {
   Settings,
   Undo2,
 } from "lucide-react"
+import { useValue } from "tldraw"
 
 import { Button } from "@/components/ui/button"
+import { useWorkspaceEditor } from "@/hooks/useEditor"
 
 function Header() {
+  const editor = useWorkspaceEditor()
+
+  const canUndo = useValue(
+    "kundraw can undo",
+    () => (editor ? editor.canUndo() : false),
+    [editor]
+  )
+
+  const canRedo = useValue(
+    "kundraw can redo",
+    () => (editor ? editor.canRedo() : false),
+    [editor]
+  )
+
   return (
     <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border bg-background px-2.5">
       <div className="flex items-center gap-2 pl-0.5">
@@ -39,7 +55,14 @@ function Header() {
 
         <span className="mx-1 hidden h-5 w-px bg-border md:block" />
 
-        <Button variant="ghost" size="icon-sm" aria-label="撤销" title="撤销">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="撤销"
+          title="撤销"
+          disabled={!canUndo}
+          onClick={() => editor?.undo()}
+        >
           <Undo2 />
         </Button>
         <Button
@@ -47,7 +70,8 @@ function Header() {
           size="icon-sm"
           aria-label="重做"
           title="重做"
-          disabled
+          disabled={!canRedo}
+          onClick={() => editor?.redo()}
         >
           <Redo2 />
         </Button>
