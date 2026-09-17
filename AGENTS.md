@@ -56,7 +56,7 @@ StatusBar                              (32px)
 | Path | Responsibility |
 | --- | --- |
 | `src/App.tsx` | Layout composition only. Keep it short — no logic here. |
-| `src/components/workspace/Header.tsx` | Brand, file name, save state, undo/redo, export, panel toggle, settings |
+| `src/components/workspace/Header.tsx` | Brand, editable project name + menu, save state, undo/redo, export, panel toggle, settings |
 | `src/components/workspace/Toolbar.tsx` | Vertical tool list; drives `editor.setCurrentTool()` |
 | `src/components/workspace/CanvasArea.tsx` | Mounts `<Tldraw hideUi />`, publishes the editor instance |
 | `src/components/workspace/RightPanel.tsx` | Panel shell; `AI 创作` / `属性` tabs and close button |
@@ -76,14 +76,16 @@ StatusBar                              (32px)
 | `src/api/newapi/images.ts` | Images API: generations (JSON) and edits (multipart) |
 | `src/api/newapi/errors.ts` | Status → `NewApiError` mapping and user-facing hints |
 | `src/api/newapi/types.ts` | OpenAI-compatible request/response shapes |
-| `src/features/ai/AiProvider.tsx` | AI state: config, prompt, references, settings, results, status |
-| `src/features/ai/models.ts` | Model registry and capability config (the only place capabilities live) |
+| `src/features/ai/AiProvider.tsx` | AI state: channels, prompt, references, settings, results, status |
+| `src/features/ai/models.ts` | Built-in model ids merged with what the channel reports |
+| `src/features/ai/constants.ts` | Ratios, resolutions, count bounds + `computeSize()` |
 | `src/features/ai/generate.ts` | Request assembly + generation orchestration |
 | `src/features/ai/canvas.ts` | `addImageToCanvas()` and image download |
-| `src/features/ai/storage.ts` | localStorage persistence for config, prompt draft, settings |
+| `src/features/ai/storage.ts` | localStorage persistence for channels, prompt draft, settings |
 | `src/features/ai/components/` | `AiPanel`, `AiSettingsDialog`, `ResultGallery`, pickers, inputs |
 | `src/hooks/useEditor.tsx` | `EditorProvider` and editor context hooks |
 | `src/hooks/useSelectedShapes.ts` | Reactive current selection |
+| `src/hooks/useProjectName.ts` | Local project name label |
 | `src/hooks/useToolShortcuts.ts` | Extra key bindings tldraw does not provide |
 | `src/components/ui/` | shadcn/ui components; generated, edit sparingly |
 
@@ -128,18 +130,24 @@ write them with the commands in `shapeProps.ts`.
 
 ## AI generation
 
-The AI panel talks to a user-supplied OpenAI-compatible NewAPI endpoint. There is
-no kunDraw backend and no credits/billing concept — never add one.
+The AI panel talks to user-supplied, OpenAI-compatible NewAPI channels. There is
+no kunDraw backend, no proxying and no credits/billing concept — never add one.
 
+- **Channels.** The user may configure several endpoints (`Channel` in
+  `types.ts`), each with its own base URL, API key and discovered model list. One
+  is active at a time; the panel and settings both switch it.
 - All requests go through `NewApiClient`; never call `fetch` from a component.
-- Prompt + reference images are assembled in `generate.ts`; only fields the
-  selected model declares are sent.
 - Text-to-image → `POST {base}/images/generations` (JSON). Image-to-image →
-  `POST {base}/images/edits` (multipart, `image` or `image[]`).
-- Model capabilities live only in `models.ts`. The three built-ins are
-  `images-2.5`, `banner`, `agens`; models discovered from `/models` are appended
-  with conservative defaults.
-- API Key lives in localStorage and must never be hard-coded or logged.
+  `POST {base}/images/edits` (multipart, `image` for one reference, `image[]` for
+  several). The mode is the user's choice, never derived from the model.
+- **No model capability gating.** Any model may be used for either mode; the
+  model field accepts free text because gateways often take ids `/models` does
+  not list. Do not reintroduce per-model restrictions.
+- References are unlimited in count (only a per-file size guard); several are
+  sent as group references.
+- `size` comes from `computeSize()` in `constants.ts` — aspect ratio × base
+  resolution. `auto` ratio sends no `size` at all.
+- API keys live in localStorage and must never be hard-coded or logged.
 - Raw errors stay in the console; the UI shows `describeNewApiError()` output.
 
 ## Canvas image insertion
