@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { Image as ImageIcon, Sparkles } from "lucide-react"
+import { toast } from "sonner"
 import { useValue } from "tldraw"
 
 import { ErrorNotice } from "./ErrorNotice"
@@ -54,9 +55,21 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
     }
 
     void ai.generate().then(async ({ images }) => {
-      if (!editor) return
-      for (const image of images) {
-        await addImageToCanvas(editor, image)
+      if (images.length === 0) return
+      if (!editor) {
+        toast.error("画布尚未就绪", { description: "请稍后重试，或刷新页面" })
+        return
+      }
+
+      try {
+        for (const image of images) {
+          await addImageToCanvas(editor, image)
+        }
+      } catch (error) {
+        console.error("[kunDraw] 添加到画布失败", error)
+        toast.error("图片已生成，但没能添加到画布", {
+          description: "可以右键结果卡片保存，或用「添加到画布」重试",
+        })
       }
     })
   }, [ai, editor, selectedPrompt])
@@ -71,8 +84,20 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
           count: image.source.count,
         })
         .then(async ({ images }) => {
-          if (!editor) return
-          for (const next of images) await addImageToCanvas(editor, next)
+          if (images.length === 0) return
+          if (!editor) {
+            toast.error("画布尚未就绪", { description: "请稍后重试，或刷新页面" })
+            return
+          }
+
+          try {
+            for (const next of images) await addImageToCanvas(editor, next)
+          } catch (error) {
+            console.error("[kunDraw] 添加到画布失败", error)
+            toast.error("图片已生成，但没能添加到画布", {
+              description: "可以右键结果卡片保存，或用「添加到画布」重试",
+            })
+          }
         })
     },
     [ai, editor]
