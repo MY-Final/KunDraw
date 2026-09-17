@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import type { TLEventInfo, TLShapeId } from "tldraw"
 
@@ -11,6 +11,7 @@ import {
   createReferencePrompt,
   generatePromptNode,
 } from "./nodeCommands"
+import { ImagePreviewDialog } from "./ImagePreviewDialog"
 import { referenceFromImageShape } from "./references"
 import { cleanupRelationsForDeletedShape } from "./relations"
 import { registerNodeActionHandler, type NodeAction } from "./nodeEvents"
@@ -27,6 +28,7 @@ function isFormField(target: EventTarget | null) {
 export function NodeCanvasController() {
   const editor = useWorkspaceEditor()
   const ai = useAi()
+  const [previewShapeId, setPreviewShapeId] = useState<TLShapeId | null>(null)
 
   useEffect(() => {
     if (!editor) return
@@ -40,6 +42,10 @@ export function NodeCanvasController() {
       }
       if (action.type === "continue-from-image") {
         createReferencePrompt(editor, action.shapeId)
+        return
+      }
+      if (action.type === "preview-image") {
+        setPreviewShapeId(action.shapeId)
         return
       }
       if (action.type === "regenerate-image") {
@@ -111,5 +117,11 @@ export function NodeCanvasController() {
     }
   }, [ai, editor])
 
-  return null
+  return editor ? (
+    <ImagePreviewDialog
+      editor={editor}
+      shapeId={previewShapeId}
+      onClose={() => setPreviewShapeId(null)}
+    />
+  ) : null
 }

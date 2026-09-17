@@ -9,6 +9,7 @@ import {
 } from "tldraw"
 
 import { ImageNode } from "./ImageNode"
+import { dispatchNodeAction } from "./nodeEvents"
 import { IMAGE_SHAPE_TYPE, type ImageShape } from "./shapeTypes"
 
 export class ImageShapeUtil extends BaseBoxShapeUtil<ImageShape> {
@@ -73,6 +74,10 @@ export class ImageShapeUtil extends BaseBoxShapeUtil<ImageShape> {
 
   override component(shape: ImageShape) {
     return <ImageNode shape={shape} editor={this.editor} />
+  }
+
+  override onDoubleClick(shape: ImageShape) {
+    dispatchNodeAction(this.editor, { type: "preview-image", shapeId: shape.id })
   }
 
   override getIndicatorPath(shape: ImageShape) {
