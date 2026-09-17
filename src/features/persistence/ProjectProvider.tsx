@@ -212,11 +212,20 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     // viewport itself changes (selection and pointer movement are ignored).
     const unlistenSession = editor.store.listen(
       (entry) => {
-        const touched = [
-          ...Object.values(entry.changes.added),
-          ...Object.values(entry.changes.updated).map(([, to]) => to),
-        ]
-        if (touched.some((record) => record.typeName === "camera")) schedule()
+        const added = Object.values(entry.changes.added)
+        const updated = Object.values(entry.changes.updated)
+        const touched = [...added, ...updated.map(([, to]) => to)]
+
+        // Camera records cover pan/zoom; the instance record covers page switches.
+        const cameraChanged = touched.some((record) => record.typeName === "camera")
+        const pageChanged = updated.some(
+          ([from, to]) =>
+            to.typeName === "instance" &&
+            from.typeName === "instance" &&
+            from.currentPageId !== to.currentPageId
+        )
+
+        if (cameraChanged || pageChanged) schedule()
       },
       { scope: "session" }
     )
