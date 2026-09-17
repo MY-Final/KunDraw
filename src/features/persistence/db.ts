@@ -36,6 +36,9 @@ function openDatabase() {
 
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error ?? new Error("无法打开本地数据库"))
+    request.onblocked = () => {
+      console.warn("[kunDraw] 本地数据库被其他标签页占用，等待其释放连接")
+    }
   })
 }
 
