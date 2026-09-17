@@ -265,3 +265,62 @@ export function deleteShapes(editor: Editor, shapes: TLShape[]) {
   editor.deleteShapes(shapes.map((shape) => shape.id))
   focusCanvas(editor)
 }
+
+export type AlignOperation = "left" | "center-horizontal" | "right" | "top" | "center-vertical" | "bottom"
+export type DistributeOperation = "horizontal" | "vertical"
+export type ReorderOperation = "front" | "forward" | "backward" | "back"
+
+export function alignShapes(editor: Editor, shapes: TLShape[], operation: AlignOperation) {
+  if (shapes.length < 2) return
+  mark(editor, `align-${operation}`)
+  editor.alignShapes(
+    shapes.map((shape) => shape.id),
+    operation
+  )
+  focusCanvas(editor)
+}
+
+export function distributeShapes(
+  editor: Editor,
+  shapes: TLShape[],
+  operation: DistributeOperation
+) {
+  if (shapes.length < 3) return
+  mark(editor, `distribute-${operation}`)
+  editor.distributeShapes(
+    shapes.map((shape) => shape.id),
+    operation
+  )
+  focusCanvas(editor)
+}
+
+export function reorderShapes(
+  editor: Editor,
+  shapes: TLShape[],
+  operation: ReorderOperation
+) {
+  if (shapes.length === 0) return
+  const ids = shapes.map((shape) => shape.id)
+
+  mark(editor, `reorder-${operation}`)
+  if (operation === "front") editor.bringToFront(ids)
+  else if (operation === "forward") editor.bringForward(ids)
+  else if (operation === "backward") editor.sendBackward(ids)
+  else editor.sendToBack(ids)
+  focusCanvas(editor)
+}
+
+export function groupShapes(editor: Editor, shapes: TLShape[]) {
+  if (shapes.length < 2) return
+  mark(editor, "group")
+  editor.groupShapes(shapes.map((shape) => shape.id))
+  focusCanvas(editor)
+}
+
+export function ungroupShapes(editor: Editor, shapes: TLShape[]) {
+  const groups = shapes.filter((shape) => shape.type === "group")
+  if (groups.length === 0) return
+  mark(editor, "ungroup")
+  editor.ungroupShapes(groups.map((shape) => shape.id))
+  focusCanvas(editor)
+}

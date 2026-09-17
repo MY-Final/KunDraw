@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 import { useSelectedShapes } from "@/hooks/useSelectedShapes"
 
+import { ArrangeSection, LayerSection } from "./ArrangeSections"
 import { FillSection, ShapePropertySections, StrokeSection } from "./ShapePropertySections"
 import { OpacitySection, ShapeCommonSections } from "./ShapeCommonSections"
 import { shapeTypeLabel } from "./shapeLabels"
@@ -169,6 +170,7 @@ function PropertiesPanel() {
           <>
             <ShapeCommonSections editor={editor} shape={shape} />
             <OpacitySection editor={editor} value={opacityPercent(opacity)} />
+            <LayerSection editor={editor} shapes={shapes} />
             <ShapePropertySections editor={editor} shape={shape} styles={styles} />
           </>
         ) : null}
@@ -179,6 +181,8 @@ function PropertiesPanel() {
               已选择 {count} 个元素，可批量修改以下外观属性。
             </p>
 
+            <ArrangeSection editor={editor} shapes={shapes} />
+            <LayerSection editor={editor} shapes={shapes} />
             <OpacitySection editor={editor} value={opacityPercent(opacity)} />
             <FillSection editor={editor} styles={styles} />
             <StrokeSection editor={editor} styles={styles} />

@@ -5,7 +5,13 @@ import { HTMLContainer, useValue, type Editor, type TLImageAsset, type TLShapeId
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { ACCEPTED_REFERENCE_TYPES, ASPECT_RATIOS, ASPECT_RATIO_LABELS } from "@/features/ai/constants"
+import {
+  ACCEPTED_REFERENCE_TYPES,
+  ASPECT_RATIOS,
+  ASPECT_RATIO_LABELS,
+  RESOLUTION_LABELS,
+  describeSize,
+} from "@/features/ai/constants"
 import { GenerationElapsed } from "@/features/ai/components/GenerationElapsed"
 import { ModelPicker } from "@/features/ai/components/ModelPicker"
 import { useOptionalAi } from "@/features/ai/useAi"
@@ -146,6 +152,14 @@ export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Edit
             {props.status === "generating" ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
             {props.status === "generating" ? <>生成中 · <GenerationElapsed /></> : "生成图片"}
           </Button>
+          <p className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+            <span className="truncate">
+              {props.mode === "image" ? `图生图 · 参考图 ${referenceShapes.length} 张` : "文生图"}
+            </span>
+            <span className="shrink-0 tabular-nums">
+              {props.count} 张 · {RESOLUTION_LABELS[props.resolution]} · {describeSize({ ...props })}
+            </span>
+          </p>
         </div>
       </article>
     </HTMLContainer>
