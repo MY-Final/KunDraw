@@ -10,11 +10,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
+import { useToolShortcuts } from "@/hooks/useToolShortcuts"
 
 import { activateTool, getActiveToolId, tools } from "./tools"
 
 function Toolbar() {
   const editor = useWorkspaceEditor()
+
+  useToolShortcuts(editor)
 
   const activeTool = useValue(
     "kundraw active tool",

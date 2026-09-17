@@ -32,7 +32,7 @@ export type Tool = {
 export const tools: Tool[] = [
   { id: "select", label: "选择", shortcut: "V", icon: MousePointer2, group: 0, tldrawToolId: "select" },
   { id: "hand", label: "手型", shortcut: "H", icon: Hand, group: 0, tldrawToolId: "hand" },
-  { id: "draw", label: "画笔", shortcut: "D", icon: Pencil, group: 1, tldrawToolId: "draw" },
+  { id: "draw", label: "画笔", shortcut: "D / P", icon: Pencil, group: 1, tldrawToolId: "draw" },
   { id: "eraser", label: "橡皮", shortcut: "E", icon: Eraser, group: 1, tldrawToolId: "eraser" },
   { id: "rectangle", label: "矩形", shortcut: "R", icon: Square, group: 2, tldrawToolId: "geo", geo: "rectangle" },
   { id: "ellipse", label: "椭圆", shortcut: "O", icon: Circle, group: 2, tldrawToolId: "geo", geo: "ellipse" },

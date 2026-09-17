@@ -1,133 +1,191 @@
 import type { ReactNode } from "react"
+import { Eye, EyeOff, Lock, LockOpen, Trash } from "lucide-react"
 import { cn } from "cn"
 import { useValue } from "tldraw"
 
+import { Button } from "@/components/ui/button"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
+import { useSelectedShapes } from "@/hooks/useSelectedShapes"
 
-import { FALLBACK, formatValue, getSelectionInfo } from "./selectionInfo"
+import { FillSection, ShapePropertySections, StrokeSection } from "./ShapePropertySections"
+import { OpacitySection, ShapeCommonSections } from "./ShapeCommonSections"
+import { shapeTypeLabel } from "./shapeLabels"
+import {
+  deleteShapes,
+  opacityPercent,
+  readOpacity,
+  stylesFor,
+  toggleHidden,
+  toggleLocked,
+  unhideAllShapes,
+} from "./shapeProps"
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="border-b border-border px-3 py-3.5">
-      <h3 className="mb-2.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-        {title}
-      </h3>
-      <div className="grid grid-cols-2 gap-2">{children}</div>
-    </section>
-  )
-}
-
-function Field({
+function PanelAction({
   label,
-  value,
-  suffix,
-  className,
+  icon,
+  active,
+  disabled,
+  onClick,
 }: {
   label: string
-  value?: string
-  suffix?: string
-  className?: string
+  icon: ReactNode
+  active?: boolean
+  disabled?: boolean
+  onClick: () => void
 }) {
   return (
-    <div
+    <Button
+      variant="ghost"
+      size="xs"
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      aria-pressed={active}
+      onClick={onClick}
       className={cn(
-        "flex h-7 items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2",
-        className
+        "h-7 flex-1 gap-1 rounded-md border border-border text-muted-foreground",
+        active && "bg-muted text-foreground"
       )}
     >
-      <span className="shrink-0 text-[11px] text-muted-foreground">
-        {label}
-      </span>
-      <span className="flex-1 truncate text-right text-xs text-foreground/80 tabular-nums">
-        {value ?? FALLBACK}
-      </span>
-      {suffix ? (
-        <span className="shrink-0 text-[11px] text-muted-foreground">
-          {suffix}
-        </span>
-      ) : null}
-    </div>
+      {icon}
+      {label}
+    </Button>
   )
 }
 
-function ColorField({ label, value }: { label: string; value: string | null }) {
+function EmptyState({
+  editor,
+  hiddenCount,
+}: {
+  editor: ReturnType<typeof useWorkspaceEditor>
+  hiddenCount: number
+}) {
   return (
-    <div className="col-span-2 flex h-7 items-center justify-between rounded-md border border-border bg-muted/40 px-2">
-      <span className="text-[11px] text-muted-foreground">{label}</span>
-      <span className="flex items-center gap-1.5">
-        <span className="size-4 rounded-sm border border-border bg-muted" />
-        <span className="text-xs text-foreground/80">{value ?? FALLBACK}</span>
-      </span>
-    </div>
+    <>
+      <p className="border-b border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+        {hiddenCount > 0
+          ? `画布中有 ${hiddenCount} 个已隐藏元素。`
+          : "选择一个元素以查看属性。"}
+      </p>
+      {hiddenCount > 0 ? (
+        <div className="border-b border-border px-3 py-2.5">
+          <Button
+            variant="outline"
+            size="xs"
+            className="w-full"
+            disabled={!editor}
+            onClick={() => editor && unhideAllShapes(editor)}
+          >
+            全部显示
+          </Button>
+        </div>
+      ) : null}
+    </>
   )
 }
 
 function PropertiesPanel() {
   const editor = useWorkspaceEditor()
-  const selection = useValue(
-    "kundraw selection",
-    () => getSelectionInfo(editor),
+  const shapes = useSelectedShapes()
+
+  const styles = useValue(
+    "kundraw shared styles",
+    () => (editor ? stylesFor(editor) : null),
     [editor]
   )
 
+  const opacity = useValue(
+    "kundraw shared opacity",
+    () => (editor ? readOpacity(editor) : undefined),
+    [editor]
+  )
+
+  const hiddenCount = useValue(
+    "kundraw hidden shapes",
+    () =>
+      editor
+        ? editor
+            .getCurrentPageShapes()
+            .filter((shape) => editor.isShapeHidden(shape.id)).length
+        : 0,
+    [editor]
+  )
+
+  const count = shapes.length
+  const shape = count === 1 ? shapes[0] : null
+  const isLocked = count > 0 && shapes.every((item) => item.isLocked)
+  const isHidden =
+    count > 0 && Boolean(editor && shapes.every((item) => editor.isShapeHidden(item.id)))
+
   const statusText =
-    selection.count === 0
+    count === 0
       ? "未选择"
-      : selection.count === 1
+      : count === 1
         ? "已选择 1 个元素"
-        : `已选择 ${selection.count} 个元素`
+        : `已选择 ${count} 个元素`
 
   return (
-    <aside
-      aria-label="属性面板"
-      className="hidden w-[280px] shrink-0 flex-col border-l border-border bg-background lg:flex"
-    >
-      <div className="flex h-11 shrink-0 items-center justify-between border-b border-border px-3">
-        <h2 className="text-sm font-medium">属性</h2>
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
         <span className="text-[11px] text-muted-foreground">{statusText}</span>
+        {shape ? (
+          <span className="truncate text-[11px] text-foreground/70">
+            {shapeTypeLabel(shape)}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-2">
+        <PanelAction
+          label={isLocked ? "解锁" : "锁定"}
+          icon={
+            isLocked ? <Lock className="size-3.5" /> : <LockOpen className="size-3.5" />
+          }
+          active={isLocked}
+          disabled={!editor || count === 0}
+          onClick={() => editor && toggleLocked(editor, shapes)}
+        />
+        <PanelAction
+          label={isHidden ? "显示" : "隐藏"}
+          icon={isHidden ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+          active={isHidden}
+          disabled={!editor || count === 0}
+          onClick={() => editor && toggleHidden(editor, shapes)}
+        />
+        <PanelAction
+          label="删除"
+          icon={<Trash className="size-3.5" />}
+          disabled={!editor || count === 0}
+          onClick={() => editor && deleteShapes(editor, shapes)}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {selection.count === 0 ? (
-          <p className="border-b border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-            选择画布中的元素以查看其属性。
-          </p>
-        ) : (
-          <div className="border-b border-border px-3 py-3.5">
-            <Field label="类型" value={selection.type ?? FALLBACK} />
-          </div>
-        )}
+        {count === 0 ? (
+          <EmptyState editor={editor} hiddenCount={hiddenCount} />
+        ) : null}
 
-        <Section title="位置">
-          <Field label="X" value={formatValue(selection.x)} />
-          <Field label="Y" value={formatValue(selection.y)} />
-        </Section>
+        {editor && shape && styles ? (
+          <>
+            <ShapeCommonSections editor={editor} shape={shape} />
+            <OpacitySection editor={editor} value={opacityPercent(opacity)} />
+            <ShapePropertySections editor={editor} shape={shape} styles={styles} />
+          </>
+        ) : null}
 
-        <Section title="尺寸">
-          <Field label="宽" value={formatValue(selection.w)} />
-          <Field label="高" value={formatValue(selection.h)} />
-        </Section>
+        {editor && count > 1 && styles ? (
+          <>
+            <p className="border-b border-border px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+              已选择 {count} 个元素，可批量修改以下外观属性。
+            </p>
 
-        <Section title="变换">
-          <Field
-            label="旋转"
-            value={formatValue(selection.rotation)}
-            suffix="°"
-          />
-          <Field
-            label="透明度"
-            value={formatValue(selection.opacity)}
-            suffix="%"
-          />
-        </Section>
-
-        <Section title="外观">
-          <ColorField label="填充" value={selection.fill} />
-          <ColorField label="描边" value={selection.stroke} />
-          <Field label="圆角" className="col-span-2" suffix="px" />
-        </Section>
+            <OpacitySection editor={editor} value={opacityPercent(opacity)} />
+            <FillSection editor={editor} styles={styles} />
+            <StrokeSection editor={editor} styles={styles} />
+          </>
+        ) : null}
       </div>
-    </aside>
+    </div>
   )
 }
 
