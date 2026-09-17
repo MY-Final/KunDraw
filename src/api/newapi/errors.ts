@@ -130,10 +130,10 @@ function hintsFor(kind: NewApiErrorKind, context: "generate" | "models") {
     case "network":
       return context === "generate"
         ? [
+            "若 Network 显示 524，是网关等待回源超时（Cloudflare 默认约 100 秒），上游可能已出图并计费",
+            "网关需关闭该域名的 CDN 代理、延长回源超时，或改用异步任务查询",
+            "可减少生成张数、参考图数量或分辨率后重试",
             "控制台若提示 Access-Control-Allow-Origin 与当前地址不符，说明渠道限制了跨域来源，需放行 kunDraw 的访问域名",
-            "若 Network 显示 524，表示网关等待上游生成超时，并非普通跨域失败",
-            "可减少生成张数、分辨率或参考图数量后重试",
-            "接口方需缩短生成耗时、提高代理超时，或改用异步任务查询",
           ]
         : [
             "确认 NewAPI 地址可以直接从浏览器访问",
@@ -142,7 +142,7 @@ function hintsFor(kind: NewApiErrorKind, context: "generate" | "models") {
             "控制台若提示 Access-Control-Allow-Origin 与当前地址不符，说明渠道限制了跨域来源",
           ]
     case "timeout":
-      return ["客户端已等待 10 分钟仍未收到结果", "确认上游服务未卡住，或降低生成负载后重试"]
+      return ["客户端已等待 20 分钟仍未收到结果", "确认上游服务未卡住，或降低生成负载后重试"]
     case "cancelled":
       return []
     case "config":
