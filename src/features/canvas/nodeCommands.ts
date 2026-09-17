@@ -105,15 +105,18 @@ export function createReferencePrompt(
   return promptId
 }
 
-export async function addGeneratedImagesForPrompt(
+async function addImagesInGrid(
   editor: Editor,
-  prompt: PromptShape,
-  images: GeneratedImage[]
+  images: GeneratedImage[],
+  origin: VecModel,
+  options: { sourcePromptId?: TLShapeId; relationSourceId?: TLShapeId; columns?: number } = {}
 ) {
   const createdIds: TLShapeId[] = []
   // A batch stays a compact block: up to three columns, then wraps.
-  const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(images.length))))
-  const origin = { x: prompt.x + prompt.props.w + NODE_GAP, y: prompt.y }
+  const columns = Math.min(
+    options.columns ?? 3,
+    Math.max(1, Math.ceil(Math.sqrt(images.length)))
+  )
   let column = 0
   let columnLeft = 0
   let columnWidth = 0
@@ -122,13 +125,13 @@ export async function addGeneratedImagesForPrompt(
 
   for (const image of images) {
     const id = await addImageToCanvas(editor, image, {
-      sourcePromptId: prompt.id,
+      sourcePromptId: options.sourcePromptId,
       point: { x: origin.x + columnLeft, y: origin.y + rowTop },
     })
     if (!id) continue
 
     createdIds.push(id)
-    createRelation(editor, prompt.id, id, "generation")
+    if (options.relationSourceId) createRelation(editor, options.relationSourceId, id, "generation")
 
     const shape = editor.getShape<ImageShape>(id)
     columnWidth = Math.max(columnWidth, shape?.props.w ?? 0)
@@ -147,6 +150,22 @@ export async function addGeneratedImagesForPrompt(
     }
   }
 
+  if (createdIds.length > 0) editor.select(...createdIds)
+  return createdIds
+}
+
+export async function addGeneratedImagesForPrompt(
+  editor: Editor,
+  prompt: PromptShape,
+  images: GeneratedImage[]
+) {
+  const createdIds = await addImagesInGrid(
+    editor,
+    images,
+    { x: prompt.x + prompt.props.w + NODE_GAP, y: prompt.y },
+    { sourcePromptId: prompt.id, relationSourceId: prompt.id }
+  )
+
   if (createdIds.length > 0) {
     const current = editor.getShape<PromptShape>(prompt.id)
     if (current?.type === PROMPT_SHAPE_TYPE) {
@@ -159,10 +178,23 @@ export async function addGeneratedImagesForPrompt(
         },
       })
     }
-    editor.select(...createdIds)
   }
 
   return createdIds
+}
+
+/** Places derived images below their source (used by local repaint). */
+export function addDerivedImages(
+  editor: Editor,
+  source: { id: TLShapeId; x: number; y: number; props: { w: number; h: number } },
+  images: GeneratedImage[]
+) {
+  return addImagesInGrid(
+    editor,
+    images,
+    { x: source.x, y: source.y + source.props.h + NODE_GAP },
+    { relationSourceId: source.id, columns: 2 }
+  )
 }
 
 export async function generatePromptNode(

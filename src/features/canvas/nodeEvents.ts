@@ -5,6 +5,7 @@ export type NodeAction =
   | { type: "continue-from-image"; shapeId: TLShapeId }
   | { type: "preview-image"; shapeId: TLShapeId }
   | { type: "regenerate-image"; shapeId: TLShapeId }
+  | { type: "inpaint-image"; shapeId: TLShapeId }
   | { type: "download-image"; shapeId: TLShapeId }
   | { type: "delete-node"; shapeId: TLShapeId }
 

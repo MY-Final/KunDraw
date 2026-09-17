@@ -37,6 +37,7 @@ export type AiContextValue = AiState & {
     overrides?: Partial<GenerationSettings> & {
       prompt?: string
       references?: ReferenceImage[]
+      mask?: Blob
     }
   ) => Promise<GeneratedImage[]>
   removeResult: (id: string) => void

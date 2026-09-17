@@ -52,6 +52,8 @@ export type GenerationInput = {
   count: number
   size?: string
   references: ReferenceImage[]
+  /** Optional inpainting mask sent together with a single reference image. */
+  mask?: Blob
   source: GeneratedImageSource
 }
 
@@ -62,8 +64,9 @@ export function buildGenerationInput(params: {
   settings: GenerationSettings
   prompt: string
   references: ReferenceImage[]
+  mask?: Blob
 }): GenerationInput {
-  const { channel, model, settings, prompt, references } = params
+  const { channel, model, settings, prompt, references, mask } = params
   const sendsReferences = settings.mode === "image" && references.length > 0
   const sentReferences = sendsReferences ? references : []
   const brief = sendsReferences ? referenceBrief(references) : ""
@@ -75,6 +78,7 @@ export function buildGenerationInput(params: {
     count: settings.count,
     size: computeSize(settings),
     references: sentReferences,
+    mask: sendsReferences ? mask : undefined,
     source: {
       prompt,
       model,
@@ -106,6 +110,7 @@ export async function runGeneration(
       size: input.size,
       responseFormat: "b64_json",
       references,
+      mask: input.mask,
     })
 
     const images = payloads.flatMap((payload) => {

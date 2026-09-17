@@ -210,6 +210,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       overrides?: Partial<GenerationSettings> & {
         prompt?: string
         references?: ReferenceImage[]
+        mask?: Blob
       }
     ) => {
       if (generating.current) return []
@@ -248,6 +249,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
           prompt: nextPrompt,
           references:
             nextSettings.mode === "image" ? (overrides?.references ?? references) : [],
+          mask: overrides?.mask,
         })
 
         const outcome = await runGeneration(input)

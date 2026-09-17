@@ -21,6 +21,8 @@ export type GenerateImageRequest = {
   /** Extra body fields, only supplied by models that declare them. */
   extraParams?: Record<string, unknown>
   references?: ReferenceFile[]
+  /** Inpainting mask: transparent areas mark the region to regenerate. */
+  mask?: Blob
   timeoutMs?: number
 }
 

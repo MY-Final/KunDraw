@@ -110,6 +110,8 @@ export async function generateImages(
     form.append(fieldName, reference.blob, reference.name)
   }
 
+  if (request.mask) form.append("mask", request.mask, "mask.png")
+
   const response = await client.requestForm<OpenAiImageResponse>(
     "/images/edits",
     form,

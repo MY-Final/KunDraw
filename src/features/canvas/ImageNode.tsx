@@ -1,4 +1,4 @@
-import { Download, Maximize2, RefreshCw, Sparkles, Trash2 } from "lucide-react"
+import { Download, Maximize2, Paintbrush, RefreshCw, Sparkles, Trash2 } from "lucide-react"
 import { HTMLContainer, useValue, type Editor, type TLImageAsset } from "tldraw"
 
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,7 @@ export function ImageNode({ shape, editor }: { shape: ImageShape; editor: Editor
     [editor, shape.id]
   )
   const src = (asset && "src" in asset.props ? asset.props.src : null) || shape.props.imageUrl
-  const action = (type: "continue-from-image" | "preview-image" | "regenerate-image" | "download-image" | "delete-node") => dispatchNodeAction(editor, { type, shapeId: shape.id })
+  const action = (type: "continue-from-image" | "preview-image" | "regenerate-image" | "inpaint-image" | "download-image" | "delete-node") => dispatchNodeAction(editor, { type, shapeId: shape.id })
 
   return (
     <HTMLContainer className="group/image overflow-visible">
@@ -23,6 +23,7 @@ export function ImageNode({ shape, editor }: { shape: ImageShape; editor: Editor
         <NodeFloatingToolbar label="图片操作">
           <Button variant="ghost" size="xs" onClick={() => action("continue-from-image")}><Sparkles />继续创作</Button>
           <Button variant="ghost" size="xs" onClick={() => action("preview-image")}><Maximize2 />预览</Button>
+          <Button variant="ghost" size="xs" onClick={() => action("inpaint-image")}><Paintbrush />局部重绘</Button>
           <Button variant="ghost" size="xs" disabled={!shape.props.sourcePromptId} onClick={() => action("regenerate-image")}><RefreshCw />重新生成</Button>
           <Button variant="ghost" size="icon-xs" aria-label="下载" title="下载" onClick={() => action("download-image")}><Download /></Button>
           <Button variant="ghost" size="icon-xs" className="text-destructive" aria-label="删除图片" title="删除图片" onClick={() => action("delete-node")}><Trash2 /></Button>

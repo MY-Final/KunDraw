@@ -8,11 +8,13 @@ import { useProject } from "@/features/persistence/useProject"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
 import {
+  addDerivedImages,
   createPromptNode,
   createReferencePrompt,
   generatePromptNode,
 } from "./nodeCommands"
 import { ImagePreviewDialog } from "./ImagePreviewDialog"
+import { InpaintDialog, type InpaintTarget } from "./InpaintDialog"
 import { referenceFromImageShape } from "./references"
 import { cleanupRelationsForDeletedShape } from "./relations"
 import { registerNodeActionHandler, type NodeAction } from "./nodeEvents"
@@ -31,6 +33,7 @@ export function NodeCanvasController() {
   const ai = useAi()
   const { project } = useProject()
   const [previewShapeId, setPreviewShapeId] = useState<TLShapeId | null>(null)
+  const [inpaintTarget, setInpaintTarget] = useState<InpaintTarget | null>(null)
 
   useEffect(() => {
     if (!editor) return
@@ -48,6 +51,24 @@ export function NodeCanvasController() {
       }
       if (action.type === "preview-image") {
         setPreviewShapeId(action.shapeId)
+        return
+      }
+      if (action.type === "inpaint-image") {
+        const image = editor.getShape<ImageShape>(action.shapeId)
+        if (!image || image.type !== IMAGE_SHAPE_TYPE) return
+        const source = referenceFromImageShape(editor, image)
+        if (!source) {
+          toast.error("无法读取这张图片", { description: "图片可能已失效，请重新生成" })
+          return
+        }
+        setInpaintTarget({
+          shapeId: image.id,
+          src: source.dataUrl,
+          name: source.name,
+          mimeType: source.mimeType,
+          prompt: image.props.prompt,
+          model: image.props.model,
+        })
         return
       }
       if (action.type === "delete-node") {
@@ -118,10 +139,28 @@ export function NodeCanvasController() {
   }, [ai, editor, project.name])
 
   return editor ? (
-    <ImagePreviewDialog
-      editor={editor}
-      shapeId={previewShapeId}
-      onClose={() => setPreviewShapeId(null)}
-    />
+    <>
+      <ImagePreviewDialog
+        editor={editor}
+        shapeId={previewShapeId}
+        onClose={() => setPreviewShapeId(null)}
+      />
+      <InpaintDialog
+        target={inpaintTarget}
+        onClose={() => setInpaintTarget(null)}
+        onApply={(target, images) => {
+          setInpaintTarget(null)
+          const source = editor.getShape<ImageShape>(target.shapeId)
+          if (!source || source.type !== IMAGE_SHAPE_TYPE) {
+            toast.error("原图片已被删除")
+            return
+          }
+
+          void addDerivedImages(editor, source, images).then((ids) => {
+            if (ids.length > 0) toast.success(`已重绘 ${ids.length} 张并添加到画布`)
+          })
+        }}
+      />
+    </>
   ) : null
 }
