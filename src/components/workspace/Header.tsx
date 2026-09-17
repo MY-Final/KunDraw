@@ -2,17 +2,27 @@ import {
   Check,
   ChevronDown,
   Download,
+  PanelRight,
   PenTool,
   Redo2,
   Settings,
   Undo2,
 } from "lucide-react"
+import { cn } from "cn"
 import { useValue } from "tldraw"
 
 import { Button } from "@/components/ui/button"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
-function Header() {
+function Header({
+  onOpenSettings,
+  panelOpen,
+  onTogglePanel,
+}: {
+  onOpenSettings: () => void
+  panelOpen: boolean
+  onTogglePanel: () => void
+}) {
   const editor = useWorkspaceEditor()
 
   const canUndo = useValue(
@@ -82,7 +92,24 @@ function Header() {
           <Download />
           导出
         </Button>
-        <Button variant="ghost" size="icon-sm" aria-label="设置" title="设置">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={panelOpen ? "收起侧栏" : "展开侧栏"}
+          title={panelOpen ? "收起侧栏" : "展开侧栏"}
+          aria-pressed={panelOpen}
+          onClick={onTogglePanel}
+          className={cn("hidden lg:inline-flex", panelOpen && "bg-muted text-foreground")}
+        >
+          <PanelRight />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="设置"
+          title="设置"
+          onClick={onOpenSettings}
+        >
           <Settings />
         </Button>
       </div>
