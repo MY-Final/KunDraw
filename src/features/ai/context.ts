@@ -22,6 +22,12 @@ export type AiState = {
   error: AiError | null
 }
 
+/** Outcome of one generation attempt; `cancelled` and `busy` are not errors. */
+export type GenerationOutcome = {
+  images: GeneratedImage[]
+  status: "ok" | "cancelled" | "busy" | "error"
+}
+
 export type AiContextValue = AiState & {
   isConfigured: boolean
   setChannels: (channels: Channel[]) => void
@@ -39,7 +45,8 @@ export type AiContextValue = AiState & {
       references?: ReferenceImage[]
       mask?: Blob
     }
-  ) => Promise<GeneratedImage[]>
+  ) => Promise<GenerationOutcome>
+  cancelGeneration: () => void
   removeResult: (id: string) => void
   clearResults: () => void
   clearError: () => void

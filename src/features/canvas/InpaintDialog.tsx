@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Eraser, LoaderCircle, Sparkles } from "lucide-react"
+import { Eraser, Sparkles, Square } from "lucide-react"
 import { toast } from "sonner"
 import type { TLShapeId } from "tldraw"
 
@@ -262,10 +262,17 @@ function InpaintEditor({
         <Button variant="outline" size="sm" disabled={busy} onClick={onClose}>
           取消
         </Button>
-        <Button size="sm" disabled={busy} onClick={() => void start()}>
-          {busy ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
-          {busy ? "重绘中" : "开始重绘"}
-        </Button>
+        {busy ? (
+          <Button size="sm" variant="outline" onClick={ai.cancelGeneration}>
+            <Square className="fill-current" />
+            取消重绘
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => void start()}>
+            <Sparkles />
+            开始重绘
+          </Button>
+        )}
       </DialogFooter>
     </>
   )
@@ -296,7 +303,7 @@ export function InpaintDialog({
 
       setBusy(true)
       try {
-        const images = await ai.generate({
+        const outcome = await ai.generate({
           prompt: options.prompt,
           model: options.model,
           mode: "image",
@@ -306,7 +313,7 @@ export function InpaintDialog({
           mask: options.mask,
         })
 
-        if (images.length > 0) onApply(target, images)
+        if (outcome.images.length > 0) onApply(target, outcome.images)
       } finally {
         setBusy(false)
       }

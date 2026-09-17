@@ -212,7 +212,7 @@ export async function generatePromptNode(
     props: { status: "generating" },
   })
 
-  const images = await ai.generate({
+  const outcome = await ai.generate({
     prompt: prompt.props.prompt,
     model: prompt.props.model,
     aspectRatio: prompt.props.aspectRatio,
@@ -222,15 +222,16 @@ export async function generatePromptNode(
     references,
   })
 
-  if (images.length === 0) {
+  if (outcome.images.length === 0) {
+    // Cancelling or waiting for another task is not a failure.
     editor.updateShape<PromptShape>({
       id: prompt.id,
       type: PROMPT_SHAPE_TYPE,
-      props: { status: "error" },
+      props: { status: outcome.status === "error" ? "error" : "idle" },
     })
     return []
   }
 
-  await addGeneratedImagesForPrompt(editor, prompt, images)
-  return images
+  await addGeneratedImagesForPrompt(editor, prompt, outcome.images)
+  return outcome.images
 }

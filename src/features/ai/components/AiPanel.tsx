@@ -53,7 +53,7 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
       return
     }
 
-    void ai.generate().then(async (images) => {
+    void ai.generate().then(async ({ images }) => {
       if (!editor) return
       for (const image of images) {
         await addImageToCanvas(editor, image)
@@ -70,7 +70,7 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
           mode: image.source.mode,
           count: image.source.count,
         })
-        .then(async (images) => {
+        .then(async ({ images }) => {
           if (!editor) return
           for (const next of images) await addImageToCanvas(editor, next)
         })
@@ -220,6 +220,7 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
         loading={loading}
         disabled={!ai.isConfigured || !panelPrompt.trim()}
         onClick={handleGenerate}
+        onCancel={ai.cancelGeneration}
       />
 
       <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">

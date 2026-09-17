@@ -95,7 +95,8 @@ export async function generateImages(
     const response = await client.requestJson<OpenAiImageResponse>(
       "/images/generations",
       fields,
-      timeoutMs
+      timeoutMs,
+      request.signal
     )
     return toPayloads(response)
   }
@@ -115,7 +116,8 @@ export async function generateImages(
   const response = await client.requestForm<OpenAiImageResponse>(
     "/images/edits",
     form,
-    timeoutMs
+    timeoutMs,
+    request.signal
   )
 
   return toPayloads(response)

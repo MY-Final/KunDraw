@@ -2,6 +2,7 @@ import type { Editor, TLShapeId } from "tldraw"
 
 export type NodeAction =
   | { type: "generate-prompt"; shapeId: TLShapeId }
+  | { type: "cancel-generation"; shapeId: TLShapeId }
   | { type: "continue-from-image"; shapeId: TLShapeId }
   | { type: "preview-image"; shapeId: TLShapeId }
   | { type: "regenerate-image"; shapeId: TLShapeId }

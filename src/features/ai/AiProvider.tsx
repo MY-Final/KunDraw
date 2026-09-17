@@ -11,7 +11,7 @@ import {
 } from "@/features/persistence/resultStore"
 import { useProject } from "@/features/persistence/useProject"
 
-import { AiContext, type AiContextValue } from "./context"
+import { AiContext, type AiContextValue, type GenerationOutcome } from "./context"
 import {
   DEFAULT_REFERENCE_ROLE,
   MAX_COUNT,
@@ -76,6 +76,8 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
   // Guards against overlapping generations.
   const generating = useRef(false)
+  // Aborted when the user cancels the in-flight generation.
+  const controllerRef = useRef<AbortController | null>(null)
   // Results generated in this session, so a slow load cannot drop them.
   const sessionResults = useRef<GeneratedImage[]>([])
 
@@ -190,6 +192,10 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
   const clearReferences = useCallback(() => setReferences([]), [])
 
+  const cancelGeneration = useCallback(() => {
+    controllerRef.current?.abort()
+  }, [])
+
   const removeResult = useCallback((id: string) => {
     setResults((current) => current.filter((image) => image.id !== id))
     void deleteStoredResult(id).catch((error) =>
@@ -213,7 +219,14 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
         mask?: Blob
       }
     ) => {
-      if (generating.current) return []
+      if (generating.current) {
+        setError({
+          kind: "input",
+          title: "已有生成任务正在进行",
+          hints: ["等待它完成，或点击取消后再试"],
+        })
+        return { images: [], status: "busy" } satisfies GenerationOutcome
+      }
 
       const nextSettings: GenerationSettings = { ...settings, ...overrides }
       const nextPrompt = (overrides?.prompt ?? prompt).trim()
@@ -226,20 +239,22 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
           title: "尚未配置 NewAPI 渠道",
           hints: ["打开右上角设置，添加一个渠道并填写地址与 API Key"],
         })
-        return []
+        return { images: [], status: "error" } satisfies GenerationOutcome
       }
       if (!model) {
         setError({ kind: "input", title: "请选择或输入模型名称", hints: [] })
-        return []
+        return { images: [], status: "error" } satisfies GenerationOutcome
       }
       if (!nextPrompt) {
         setError({ kind: "input", title: "请先输入提示词", hints: [] })
-        return []
+        return { images: [], status: "error" } satisfies GenerationOutcome
       }
 
       setError(null)
       setStatus("generating")
       generating.current = true
+      const controller = new AbortController()
+      controllerRef.current = controller
 
       try {
         const input = buildGenerationInput({
@@ -250,13 +265,17 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
           references:
             nextSettings.mode === "image" ? (overrides?.references ?? references) : [],
           mask: overrides?.mask,
+          signal: controller.signal,
         })
 
         const outcome = await runGeneration(input)
 
         if ("error" in outcome) {
+          if (outcome.error.kind === "cancelled") {
+            return { images: [], status: "cancelled" } satisfies GenerationOutcome
+          }
           setError(outcome.error)
-          return []
+          return { images: [], status: "error" } satisfies GenerationOutcome
         }
 
         sessionResults.current = mergeResults(outcome.images, sessionResults.current)
@@ -266,9 +285,10 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
           .then(() => pruneProjectResults(projectId))
           .catch((error) => console.error("[kunDraw] 保存生成结果失败", error))
 
-        return outcome.images
+        return { images: outcome.images, status: "ok" } satisfies GenerationOutcome
       } finally {
         generating.current = false
+        controllerRef.current = null
         setStatus("idle")
       }
     },
@@ -297,6 +317,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       clearReferences,
       updateSettings,
       generate,
+      cancelGeneration,
       removeResult,
       clearResults,
       clearError,
@@ -321,6 +342,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       clearReferences,
       updateSettings,
       generate,
+      cancelGeneration,
       removeResult,
       clearResults,
       clearError,

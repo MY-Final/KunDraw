@@ -45,6 +45,11 @@ export function NodeCanvasController() {
         })
         return
       }
+      if (action.type === "cancel-generation") {
+        ai.cancelGeneration()
+        toast.info("正在取消生成…")
+        return
+      }
       if (action.type === "continue-from-image") {
         createReferencePrompt(editor, action.shapeId, ai.settings.model)
         return

@@ -23,6 +23,8 @@ export type GenerateImageRequest = {
   references?: ReferenceFile[]
   /** Inpainting mask: transparent areas mark the region to regenerate. */
   mask?: Blob
+  /** Lets the caller cancel an in-flight generation. */
+  signal?: AbortSignal
   timeoutMs?: number
 }
 

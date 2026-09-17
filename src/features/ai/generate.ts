@@ -54,6 +54,8 @@ export type GenerationInput = {
   references: ReferenceImage[]
   /** Optional inpainting mask sent together with a single reference image. */
   mask?: Blob
+  /** Aborted when the user cancels the generation. */
+  signal?: AbortSignal
   source: GeneratedImageSource
 }
 
@@ -65,8 +67,9 @@ export function buildGenerationInput(params: {
   prompt: string
   references: ReferenceImage[]
   mask?: Blob
+  signal?: AbortSignal
 }): GenerationInput {
-  const { channel, model, settings, prompt, references, mask } = params
+  const { channel, model, settings, prompt, references, mask, signal } = params
   const sendsReferences = settings.mode === "image" && references.length > 0
   const sentReferences = sendsReferences ? references : []
   const brief = sendsReferences ? referenceBrief(references) : ""
@@ -79,6 +82,7 @@ export function buildGenerationInput(params: {
     size: computeSize(settings),
     references: sentReferences,
     mask: sendsReferences ? mask : undefined,
+    signal,
     source: {
       prompt,
       model,
@@ -111,6 +115,7 @@ export async function runGeneration(
       responseFormat: "b64_json",
       references,
       mask: input.mask,
+      signal: input.signal,
     })
 
     const images = payloads.flatMap((payload) => {
@@ -135,8 +140,10 @@ export async function runGeneration(
 
     return { images }
   } catch (error) {
-    // Keep the full error in the console for debugging; the panel shows a summary.
-    console.error("[kunDraw] 图片生成失败", error)
-    return { error: describeNewApiError(toNewApiError(error), "generate") }
+    const apiError = toNewApiError(error)
+    // A user-initiated cancel is not a failure; everything else stays in the
+    // console for debugging while the panel shows a summary.
+    if (apiError.kind !== "cancelled") console.error("[kunDraw] 图片生成失败", error)
+    return { error: describeNewApiError(apiError, "generate") }
   }
 }

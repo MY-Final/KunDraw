@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import { Copy, ImagePlus, LoaderCircle, Sparkles, Trash2, X } from "lucide-react"
+import { Copy, ImagePlus, Sparkles, Square, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { HTMLContainer, useValue, type Editor, type TLImageAsset, type TLShapeId } from "tldraw"
 
@@ -163,10 +163,17 @@ export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Edit
               {ASPECT_RATIOS.filter((ratio) => ["1:1", "4:3", "16:9", "3:4", "9:16"].includes(ratio)).map((ratio) => <Button key={ratio} type="button" variant={props.aspectRatio === ratio ? "outline" : "ghost"} size="xs" className={props.aspectRatio === ratio ? "border-brand text-brand" : "text-muted-foreground"} onClick={() => updatePromptShape(editor, shape.id, { aspectRatio: ratio })}>{ASPECT_RATIO_LABELS[ratio]}</Button>)}
             </div>
           </section>
-          <Button type="button" size="sm" disabled={!props.prompt.trim() || props.status === "generating"} className="w-full bg-brand text-brand-foreground hover:bg-brand/90" onClick={() => dispatchNodeAction(editor, { type: "generate-prompt", shapeId: shape.id })}>
-            {props.status === "generating" ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
-            {props.status === "generating" ? <>生成中 · <GenerationElapsed /></> : "生成图片"}
-          </Button>
+          {props.status === "generating" ? (
+            <Button type="button" size="sm" variant="outline" className="w-full" onClick={() => dispatchNodeAction(editor, { type: "cancel-generation", shapeId: shape.id })}>
+              <Square className="fill-current" />
+              取消生成 · <GenerationElapsed />
+            </Button>
+          ) : (
+            <Button type="button" size="sm" disabled={!props.prompt.trim()} className="w-full bg-brand text-brand-foreground hover:bg-brand/90" onClick={() => dispatchNodeAction(editor, { type: "generate-prompt", shapeId: shape.id })}>
+              <Sparkles />
+              生成图片
+            </Button>
+          )}
           <p className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
             <span className="truncate">
               {props.mode === "image" ? `图生图 · 参考图 ${referenceShapes.length} 张` : "文生图"}

@@ -54,7 +54,19 @@ export class NewApiClient {
     }
 
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    const externalSignal = init.signal
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      controller.abort()
+    }, timeoutMs)
+    const forwardAbort = () => controller.abort()
+
+    // A caller-supplied signal (user pressed cancel) aborts the same request.
+    if (externalSignal) {
+      if (externalSignal.aborted) controller.abort()
+      else externalSignal.addEventListener("abort", forwardAbort, { once: true })
+    }
 
     try {
       const response = await fetch(this.endpoint(path), {
@@ -82,29 +94,32 @@ export class NewApiClient {
     } catch (error) {
       if (error instanceof NewApiError) throw error
       if (error instanceof DOMException && error.name === "AbortError") {
+        if (!timedOut) throw new NewApiError("cancelled", "已取消本次生成")
         throw new NewApiError("timeout", `请求超时（${timeoutMs / 1000} 秒）`)
       }
       throw toNewApiError(error)
     } finally {
       clearTimeout(timer)
+      externalSignal?.removeEventListener("abort", forwardAbort)
     }
   }
 
-  requestJson<T>(path: string, body: unknown, timeoutMs: number) {
+  requestJson<T>(path: string, body: unknown, timeoutMs: number, signal?: AbortSignal) {
     return this.request<T>(
       path,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal,
       },
       timeoutMs
     )
   }
 
-  requestForm<T>(path: string, form: FormData, timeoutMs: number) {
+  requestForm<T>(path: string, form: FormData, timeoutMs: number, signal?: AbortSignal) {
     // Content-Type is intentionally left unset so the browser adds the multipart boundary.
-    return this.request<T>(path, { method: "POST", body: form }, timeoutMs)
+    return this.request<T>(path, { method: "POST", body: form, signal }, timeoutMs)
   }
 
   async listModels(): Promise<string[]> {
