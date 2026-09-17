@@ -59,6 +59,11 @@ function ResultCard({
       <img
         src={image.url}
         alt={image.source.prompt}
+        title={
+          image.source.references
+            ? `参考图：${image.source.references}`
+            : image.source.prompt || undefined
+        }
         loading="lazy"
         className="size-full object-cover"
       />

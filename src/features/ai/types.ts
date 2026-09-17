@@ -5,6 +5,9 @@ export type BaseResolution = 512 | 1024 | 1536 | 2048 | 3840
 
 export type GenerationMode = "text" | "image"
 
+/** What a reference image is meant to contribute to the generation. */
+export type ReferenceRole = "content" | "style" | "composition" | "subject"
+
 /** A NewAPI endpoint the user configured. kunDraw never proxies or stores these remotely. */
 export type Channel = {
   id: string
@@ -21,6 +24,7 @@ export type ReferenceImage = {
   mimeType: string
   dataUrl: string
   bytes: number
+  role: ReferenceRole
 }
 
 export type GeneratedImageSource = {
@@ -29,6 +33,8 @@ export type GeneratedImageSource = {
   channelName: string
   mode: GenerationMode
   count: number
+  /** Short description of the references used, e.g. "风格参考×1、内容参考×1". */
+  references?: string
 }
 
 export type GeneratedImage = {

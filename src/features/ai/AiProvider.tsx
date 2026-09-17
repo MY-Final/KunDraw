@@ -12,7 +12,13 @@ import {
 import { useProject } from "@/features/persistence/useProject"
 
 import { AiContext, type AiContextValue } from "./context"
-import { MAX_COUNT, MAX_REFERENCE_BYTES, MIN_COUNT, PROMPT_MAX_LENGTH } from "./constants"
+import {
+  DEFAULT_REFERENCE_ROLE,
+  MAX_COUNT,
+  MAX_REFERENCE_BYTES,
+  MIN_COUNT,
+  PROMPT_MAX_LENGTH,
+} from "./constants"
 import { buildGenerationInput, runGeneration } from "./generate"
 import {
   createId,
@@ -27,7 +33,13 @@ import {
   savePromptDraft,
   saveSettings,
 } from "./storage"
-import type { Channel, GeneratedImage, GenerationSettings, ReferenceImage } from "./types"
+import type {
+  Channel,
+  GeneratedImage,
+  GenerationSettings,
+  ReferenceImage,
+  ReferenceRole,
+} from "./types"
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -158,6 +170,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
           mimeType: file.type || "image/png",
           dataUrl,
           bytes: file.size,
+          role: DEFAULT_REFERENCE_ROLE,
         } satisfies ReferenceImage
       })
     )
@@ -167,6 +180,12 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
 
   const removeReference = useCallback((id: string) => {
     setReferences((current) => current.filter((reference) => reference.id !== id))
+  }, [])
+
+  const updateReferenceRole = useCallback((id: string, role: ReferenceRole) => {
+    setReferences((current) =>
+      current.map((reference) => (reference.id === id ? { ...reference, role } : reference))
+    )
   }, [])
 
   const clearReferences = useCallback(() => setReferences([]), [])
@@ -272,6 +291,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       setPrompt,
       addReferences,
       removeReference,
+      updateReferenceRole,
       clearReferences,
       updateSettings,
       generate,
@@ -295,6 +315,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       setPrompt,
       addReferences,
       removeReference,
+      updateReferenceRole,
       clearReferences,
       updateSettings,
       generate,

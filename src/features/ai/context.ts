@@ -6,6 +6,7 @@ import type {
   GeneratedImage,
   GenerationSettings,
   ReferenceImage,
+  ReferenceRole,
 } from "./types"
 
 export type AiState = {
@@ -29,6 +30,7 @@ export type AiContextValue = AiState & {
   setPrompt: (prompt: string) => void
   addReferences: (files: File[]) => Promise<void>
   removeReference: (id: string) => void
+  updateReferenceRole: (id: string, role: ReferenceRole) => void
   clearReferences: () => void
   updateSettings: (patch: Partial<GenerationSettings>) => void
   generate: (

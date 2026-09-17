@@ -1,21 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ImagePlus, X } from "lucide-react"
+import { Check, ChevronDown, ImagePlus, X } from "lucide-react"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
-import { ACCEPTED_REFERENCE_TYPES } from "../constants"
-import type { ReferenceImage } from "../types"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  ACCEPTED_REFERENCE_TYPES,
+  REFERENCE_ROLES,
+  REFERENCE_ROLE_LABELS,
+} from "../constants"
+import { summarizeReferenceRoles } from "../referenceRoles"
+import type { ReferenceImage, ReferenceRole } from "../types"
 import { AiField } from "./AiField"
 
 export function ReferenceImages({
   references,
   onAdd,
   onRemove,
+  onChangeRole,
   onClear,
 }: {
   references: ReferenceImage[]
   onAdd: (files: File[]) => Promise<void>
   onRemove: (id: string) => void
+  onChangeRole: (id: string, role: ReferenceRole) => void
   onClear: () => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -110,25 +123,47 @@ export function ReferenceImages({
         ) : (
           <div className="flex flex-wrap gap-2 p-2">
             {references.map((reference) => (
-              <div
-                key={reference.id}
-                className="group/ref relative size-14 overflow-hidden rounded-md border border-border bg-muted"
-              >
-                <img
-                  src={reference.dataUrl}
-                  alt={reference.name}
-                  title={reference.name}
-                  className="size-full object-cover"
-                />
-                <button
-                  type="button"
-                  aria-label={`移除 ${reference.name}`}
-                  title="移除"
-                  onClick={() => onRemove(reference.id)}
-                  className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-foreground/70 text-background opacity-0 transition-opacity group-hover/ref:opacity-100 focus-visible:opacity-100"
-                >
-                  <X className="size-2.5" />
-                </button>
+              <div key={reference.id} className="w-14 space-y-1">
+                <div className="group/ref relative size-14 overflow-hidden rounded-md border border-border bg-muted">
+                  <img
+                    src={reference.dataUrl}
+                    alt={reference.name}
+                    title={reference.name}
+                    className="size-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    aria-label={`移除 ${reference.name}`}
+                    title="移除"
+                    onClick={() => onRemove(reference.id)}
+                    className="absolute top-0.5 right-0.5 grid size-4 place-items-center rounded-full bg-foreground/70 text-background opacity-0 transition-opacity group-hover/ref:opacity-100 focus-visible:opacity-100"
+                  >
+                    <X className="size-2.5" />
+                  </button>
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    aria-label={`${reference.name} 的角色`}
+                    title="参考图角色"
+                    className="flex h-5 w-full items-center justify-between gap-0.5 rounded border border-border px-1 text-[9px] text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <span className="truncate">{REFERENCE_ROLE_LABELS[reference.role]}</span>
+                    <ChevronDown className="size-2.5 shrink-0" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-28">
+                    {REFERENCE_ROLES.map((role) => (
+                      <DropdownMenuItem
+                        key={role}
+                        className="text-xs"
+                        onClick={() => onChangeRole(reference.id, role)}
+                      >
+                        {REFERENCE_ROLE_LABELS[role]}
+                        {role === reference.role ? <Check className="ml-auto size-3.5" /> : null}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
 
@@ -150,7 +185,7 @@ export function ReferenceImages({
         <p className="text-[11px] text-destructive">{notice}</p>
       ) : references.length > 0 ? (
         <p className="text-[11px] text-muted-foreground">
-          已添加 {references.length} 张，多张会作为组图参考一起发送
+          已添加 {references.length} 张（{summarizeReferenceRoles(references)}），多张会作为组图参考一起发送
         </p>
       ) : null}
     </AiField>

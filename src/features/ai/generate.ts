@@ -3,6 +3,7 @@ import { describeNewApiError, NewApiError, toNewApiError } from "@/api/newapi/er
 import { generateImages } from "@/api/newapi/images"
 
 import { computeSize } from "./constants"
+import { referenceBrief, summarizeReferenceRoles } from "./referenceRoles"
 import type {
   AiError,
   Channel,
@@ -64,20 +65,23 @@ export function buildGenerationInput(params: {
 }): GenerationInput {
   const { channel, model, settings, prompt, references } = params
   const sendsReferences = settings.mode === "image" && references.length > 0
+  const sentReferences = sendsReferences ? references : []
+  const brief = sendsReferences ? referenceBrief(references) : ""
 
   return {
     channel,
     model,
-    prompt,
+    prompt: brief ? `${brief}\n${prompt}` : prompt,
     count: settings.count,
     size: computeSize(settings),
-    references: sendsReferences ? references : [],
+    references: sentReferences,
     source: {
       prompt,
       model,
       channelName: channel.name || channel.baseUrl,
       mode: settings.mode,
       count: settings.count,
+      references: sendsReferences ? summarizeReferenceRoles(references) : undefined,
     },
   }
 }

@@ -18,9 +18,12 @@ import {
   addReferenceFilesToPrompt,
   removePromptReferences,
   referencesForPrompt,
+  setReferenceRole,
 } from "@/features/canvas/references"
 import {
+  IMAGE_SHAPE_TYPE,
   PROMPT_SHAPE_TYPE,
+  type ImageShape,
   type PromptShape,
 } from "@/features/canvas/shapeTypes"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
@@ -141,6 +144,18 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
             (shapeId) => `ref_${shapeId}` === id
           )
           if (editor && imageId) removePromptReferences(editor, selectedPrompt, [imageId])
+        }}
+        onChangeRole={(id, role) => {
+          if (!selectedPrompt) {
+            ai.updateReferenceRole(id, role)
+            return
+          }
+
+          const imageId = selectedPrompt.props.referenceImages.find(
+            (shapeId) => `ref_${shapeId}` === id
+          )
+          const shape = editor && imageId ? editor.getShape<ImageShape>(imageId) : null
+          if (editor && shape && shape.type === IMAGE_SHAPE_TYPE) setReferenceRole(editor, shape, role)
         }}
         onClear={() => {
           if (editor && selectedPrompt) {

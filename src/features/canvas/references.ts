@@ -2,7 +2,8 @@ import type { Editor, TLImageAsset, TLShapeId } from "tldraw"
 
 import { addImageToCanvas } from "@/features/ai/canvas"
 import { MAX_REFERENCE_BYTES } from "@/features/ai/constants"
-import type { GeneratedImage, ReferenceImage } from "@/features/ai/types"
+import { DEFAULT_REFERENCE_ROLE, REFERENCE_ROLES } from "@/features/ai/constants"
+import type { GeneratedImage, ReferenceImage, ReferenceRole } from "@/features/ai/types"
 
 import { createRelation } from "./relations"
 import {
@@ -38,7 +39,26 @@ export function referenceFromImageShape(
     mimeType: shape.props.mimeType,
     dataUrl,
     bytes: 0,
+    role: readReferenceRole(shape),
   }
+}
+
+/** Roles live in shape meta so no props migration is needed. */
+export function readReferenceRole(shape: ImageShape): ReferenceRole {
+  const stored = shape.meta.kundrawReferenceRole
+  return typeof stored === "string" && REFERENCE_ROLES.includes(stored as ReferenceRole)
+    ? (stored as ReferenceRole)
+    : DEFAULT_REFERENCE_ROLE
+}
+
+export function setReferenceRole(editor: Editor, shape: ImageShape, role: ReferenceRole) {
+  editor.markHistoryStoppingPoint("kundraw:reference-role")
+  editor.updateShape<ImageShape>({
+    id: shape.id,
+    type: IMAGE_SHAPE_TYPE,
+    meta: { ...shape.meta, kundrawReferenceRole: role },
+  })
+  editor.focus()
 }
 
 export function referencesForPrompt(editor: Editor, shape: PromptShape) {

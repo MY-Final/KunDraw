@@ -14,11 +14,16 @@ import {
 } from "@/features/ai/constants"
 import { GenerationElapsed } from "@/features/ai/components/GenerationElapsed"
 import { ModelPicker } from "@/features/ai/components/ModelPicker"
+import { summarizeReferenceRoles } from "@/features/ai/referenceRoles"
 import { useOptionalAi } from "@/features/ai/useAi"
 
 import { dispatchNodeAction } from "./nodeEvents"
 import { NodeFloatingToolbar } from "./NodeFloatingToolbar"
-import { addReferenceFilesToPrompt, removePromptReferences } from "./references"
+import {
+  addReferenceFilesToPrompt,
+  readReferenceRole,
+  removePromptReferences,
+} from "./references"
 import {
   PROMPT_SHAPE_TYPE,
   type ImageShape,
@@ -68,9 +73,15 @@ export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Edit
     () => editor.getOnlySelectedShape()?.id === shape.id,
     [editor, shape.id]
   )
-  const referenceShapes = props.referenceImages
-    .map((id) => editor.getShape(id as TLShapeId))
-    .filter((item): item is ImageShape => item?.type === "kundraw-image")
+  // Reactive so role changes on the referenced images re-render this node.
+  const referenceShapes = useValue(
+    `kundraw prompt references ${shape.id}`,
+    () =>
+      props.referenceImages
+        .map((id) => editor.getShape(id as TLShapeId))
+        .filter((item): item is ImageShape => item?.type === "kundraw-image"),
+    [editor, props.referenceImages]
+  )
 
   return (
     <HTMLContainer className="group/prompt overflow-visible">
@@ -96,7 +107,11 @@ export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Edit
           <section className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] font-medium text-foreground/75">参考图</span>
-              <span className="text-[10px] text-muted-foreground">{referenceShapes.length > 0 ? `已引用 ${referenceShapes.length} 张` : "可添加多张"}</span>
+              <span className="min-w-0 truncate text-[10px] text-muted-foreground" title={referenceShapes.length > 0 ? summarizeReferenceRoles(referenceShapes.map((item) => ({ role: readReferenceRole(item) }))) : undefined}>
+                {referenceShapes.length > 0
+                  ? `已引用 ${referenceShapes.length} 张 · ${summarizeReferenceRoles(referenceShapes.map((item) => ({ role: readReferenceRole(item) })))}`
+                  : "可添加多张"}
+              </span>
             </div>
             <input
               ref={referenceInputRef}

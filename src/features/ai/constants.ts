@@ -3,6 +3,7 @@ import type {
   BaseResolution,
   GenerationMode,
   GenerationSettings,
+  ReferenceRole,
 } from "./types"
 
 export const ASPECT_RATIOS: AspectRatio[] = [
@@ -65,6 +66,17 @@ export const MODE_LABELS: Record<GenerationMode, string> = {
   text: "文生图",
   image: "图生图",
 }
+
+export const REFERENCE_ROLES: ReferenceRole[] = ["content", "style", "composition", "subject"]
+
+export const REFERENCE_ROLE_LABELS: Record<ReferenceRole, string> = {
+  content: "内容参考",
+  style: "风格参考",
+  composition: "构图参考",
+  subject: "主体参考",
+}
+
+export const DEFAULT_REFERENCE_ROLE: ReferenceRole = "content"
 
 export const DEFAULT_SETTINGS: GenerationSettings = {
   model: "",
