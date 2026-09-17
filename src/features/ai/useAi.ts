@@ -11,3 +11,11 @@ export function useAi() {
 
   return context
 }
+
+/**
+ * For components that also render outside the app tree — tldraw renders shapes
+ * in a detached root while exporting, where AiProvider does not exist.
+ */
+export function useOptionalAi() {
+  return useContext(AiContext)
+}

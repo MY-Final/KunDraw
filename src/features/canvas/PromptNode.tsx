@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ACCEPTED_REFERENCE_TYPES, ASPECT_RATIOS, ASPECT_RATIO_LABELS } from "@/features/ai/constants"
 import { GenerationElapsed } from "@/features/ai/components/GenerationElapsed"
 import { ModelPicker } from "@/features/ai/components/ModelPicker"
-import { useAi } from "@/features/ai/useAi"
+import { useOptionalAi } from "@/features/ai/useAi"
 
 import { dispatchNodeAction } from "./nodeEvents"
 import { NodeFloatingToolbar } from "./NodeFloatingToolbar"
@@ -54,7 +54,7 @@ function ReferenceThumbnail({ shape, editor, onRemove }: { shape: ImageShape; ed
 }
 
 export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Editor }) {
-  const ai = useAi()
+  const ai = useOptionalAi()
   const referenceInputRef = useRef<HTMLInputElement>(null)
   const { props } = shape
   const isSelected = useValue(
@@ -124,13 +124,17 @@ export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Edit
             </div>
           </section>
           <ModelPicker
-            models={ai.models}
+            models={ai?.models ?? []}
             value={props.model}
             disabled={props.status === "generating"}
             onChange={(model) => updatePromptShape(editor, shape.id, { model })}
-            onRefresh={async () => {
-              await ai.refreshModels()
-            }}
+            onRefresh={
+              ai
+                ? async () => {
+                    await ai.refreshModels()
+                  }
+                : undefined
+            }
           />
           <section className="space-y-1.5">
             <span className="text-[11px] font-medium text-foreground/75">比例</span>

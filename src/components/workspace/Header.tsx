@@ -1,10 +1,22 @@
-import { Download, PanelRight, PenTool, Redo2, Settings, Undo2 } from "lucide-react"
+import { useCallback, useState } from "react"
+import {
+  Download,
+  LoaderCircle,
+  PanelRight,
+  PenTool,
+  Redo2,
+  Settings,
+  Undo2,
+} from "lucide-react"
 import { cn } from "cn"
+import { toast } from "sonner"
 import { useValue } from "tldraw"
 
 import { Button } from "@/components/ui/button"
+import { exportCanvasAsPng } from "@/features/canvas/exportCanvas"
 import { ProjectMenu } from "@/features/persistence/components/ProjectMenu"
 import { SaveStatusIndicator } from "@/features/persistence/components/SaveStatusIndicator"
+import { useProject } from "@/features/persistence/useProject"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
 function Header({
@@ -19,6 +31,8 @@ function Header({
   onTogglePanel: () => void
 }) {
   const editor = useWorkspaceEditor()
+  const { project } = useProject()
+  const [exporting, setExporting] = useState(false)
 
   const canUndo = useValue(
     "kundraw can undo",
@@ -31,6 +45,22 @@ function Header({
     () => (editor ? editor.canRedo() : false),
     [editor]
   )
+
+  const handleExport = useCallback(async () => {
+    if (!editor || exporting) return
+    setExporting(true)
+
+    try {
+      const exported = await exportCanvasAsPng(editor, project.name)
+      if (exported) toast.success("已导出 PNG")
+      else toast.info("画布是空的，没有可导出的内容")
+    } catch (error) {
+      console.error("[kunDraw] 导出失败", error)
+      toast.error("导出失败", { description: "可以尝试减少节点数量后重试" })
+    } finally {
+      setExporting(false)
+    }
+  }, [editor, exporting, project.name])
 
   return (
     <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border bg-background px-2.5">
@@ -73,9 +103,15 @@ function Header({
 
         <span className="mx-1 h-5 w-px bg-border" />
 
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Download />
-          导出
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          disabled={!editor || exporting}
+          onClick={() => void handleExport()}
+        >
+          {exporting ? <LoaderCircle className="animate-spin" /> : <Download />}
+          {exporting ? "导出中" : "导出"}
         </Button>
         <Button
           variant="ghost"
