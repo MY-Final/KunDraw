@@ -128,11 +128,18 @@ function hintsFor(kind: NewApiErrorKind, context: "generate" | "models") {
     case "server":
       return ["稍后重试", "确认上游模型服务可用"]
     case "network":
-      return [
-        "确认 NewAPI 地址可以直接从浏览器访问",
-        "第三方服务需允许当前站点跨域，并放行 GET、POST、OPTIONS",
-        "服务端需允许 Authorization 与 Content-Type 请求头",
-      ]
+      return context === "generate"
+        ? [
+            "若 Network 显示 524，表示网关等待上游生成超时，并非普通跨域失败",
+            "可减少生成张数、分辨率或参考图数量后重试",
+            "接口方需缩短生成耗时、提高代理超时，或改用异步任务查询",
+            "错误响应仍需携带 CORS 头，否则浏览器无法读取具体状态",
+          ]
+        : [
+            "确认 NewAPI 地址可以直接从浏览器访问",
+            "第三方服务需允许当前站点跨域，并放行 GET、POST、OPTIONS",
+            "服务端需允许 Authorization 与 Content-Type 请求头",
+          ]
     case "timeout":
       return ["图片生成可能耗时较长，请稍后重试", "确认上游服务未卡住"]
     case "cancelled":
@@ -150,7 +157,10 @@ export function describeNewApiError(
 ): AiErrorInfo {
   return {
     kind: error.kind,
-    title: error.message,
+    title:
+      error.kind === "network" && context === "generate"
+        ? "生成请求被网关中断或浏览器拦截"
+        : error.message,
     hints: hintsFor(error.kind, context),
     detail: error.detail,
   }
