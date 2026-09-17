@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
-import { Check, ChevronDown } from "lucide-react"
+import { Check, ChevronDown, LoaderCircle, RefreshCw } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -22,15 +23,19 @@ export function ModelPicker({
   models,
   value,
   onChange,
+  onRefresh,
   disabled,
 }: {
   models: string[]
   value: string
   onChange: (model: string) => void
+  onRefresh?: () => Promise<void>
   disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const [refreshing, setRefreshing] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase()
@@ -45,6 +50,19 @@ export function ModelPicker({
     onChange(model)
     setQuery("")
     setOpen(false)
+  }
+
+  const refresh = async () => {
+    if (!onRefresh || refreshing) return
+    setRefreshing(true)
+    setNotice(null)
+    try {
+      await onRefresh()
+    } catch {
+      setNotice("渠道未开放模型列表，可继续手动输入")
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   return (
@@ -70,6 +88,24 @@ export function ModelPicker({
               placeholder="搜索或输入模型名称"
               onValueChange={setQuery}
             />
+            <div className="flex items-center justify-between gap-2 border-b border-border px-2 py-1.5">
+              <span className="text-[10px] text-muted-foreground">
+                {notice ?? `当前有 ${models.length} 个可选模型`}
+              </span>
+              {onRefresh ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  disabled={refreshing}
+                  onClick={() => void refresh()}
+                  className="h-6 text-[10px] text-muted-foreground"
+                >
+                  {refreshing ? <LoaderCircle className="animate-spin" /> : <RefreshCw />}
+                  {refreshing ? "获取中" : "刷新列表"}
+                </Button>
+              ) : null}
+            </div>
             <CommandList>
               <CommandEmpty>
                 {trimmed ? `使用 “${trimmed}”` : "没有模型，请先在设置中测试连接"}

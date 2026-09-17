@@ -4,9 +4,10 @@ import { toast } from "sonner"
 import { HTMLContainer, useValue, type Editor, type TLImageAsset, type TLShapeId } from "tldraw"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ACCEPTED_REFERENCE_TYPES, ASPECT_RATIOS, ASPECT_RATIO_LABELS } from "@/features/ai/constants"
+import { ModelPicker } from "@/features/ai/components/ModelPicker"
+import { useAi } from "@/features/ai/useAi"
 
 import { dispatchNodeAction } from "./nodeEvents"
 import { NodeFloatingToolbar } from "./NodeFloatingToolbar"
@@ -52,6 +53,7 @@ function ReferenceThumbnail({ shape, editor, onRemove }: { shape: ImageShape; ed
 }
 
 export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Editor }) {
+  const ai = useAi()
   const referenceInputRef = useRef<HTMLInputElement>(null)
   const { props } = shape
   const isSelected = useValue(
@@ -120,10 +122,15 @@ export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Edit
               </Button>
             </div>
           </section>
-          <label className="grid grid-cols-[42px_1fr] items-center gap-2 text-[11px] font-medium text-foreground/75">
-            模型
-            <Input aria-label="模型" value={props.model} onChange={(event) => updatePromptShape(editor, shape.id, { model: event.target.value })} className="h-8 text-xs" />
-          </label>
+          <ModelPicker
+            models={ai.models}
+            value={props.model}
+            disabled={props.status === "generating"}
+            onChange={(model) => updatePromptShape(editor, shape.id, { model })}
+            onRefresh={async () => {
+              await ai.refreshModels()
+            }}
+          />
           <section className="space-y-1.5">
             <span className="text-[11px] font-medium text-foreground/75">比例</span>
             <div className="grid grid-cols-5 gap-1">

@@ -25,6 +25,7 @@ export type AiContextValue = AiState & {
   isConfigured: boolean
   setChannels: (channels: Channel[]) => void
   setActiveChannelId: (id: string) => void
+  refreshModels: () => Promise<string[]>
   setPrompt: (prompt: string) => void
   addReferences: (files: File[]) => Promise<void>
   removeReference: (id: string) => void

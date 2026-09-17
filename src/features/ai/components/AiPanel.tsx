@@ -166,6 +166,9 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
         count={panelCount}
         disabled={loading}
         onOpenSettings={onOpenSettings}
+        onRefreshModels={async () => {
+          await ai.refreshModels()
+        }}
         onModeChange={(mode) => {
           if (!updateSelectedPrompt({ mode })) ai.updateSettings({ mode })
         }}

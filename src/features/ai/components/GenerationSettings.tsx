@@ -45,6 +45,7 @@ export function GenerationSettings({
   count,
   disabled,
   onOpenSettings,
+  onRefreshModels,
   onModeChange,
   onModelChange,
   onAspectRatioChange,
@@ -59,6 +60,7 @@ export function GenerationSettings({
   count: number
   disabled: boolean
   onOpenSettings: () => void
+  onRefreshModels: () => Promise<void>
   onModeChange: (value: GenerationMode) => void
   onModelChange: (value: string) => void
   onAspectRatioChange: (value: AspectRatio) => void
@@ -87,7 +89,7 @@ export function GenerationSettings({
 
         <ChoiceGroup ariaLabel="生成模式" value={mode} choices={MODE_CHOICES} onChange={onModeChange} disabled={disabled} />
 
-        <ModelPicker models={models} value={model} onChange={onModelChange} disabled={disabled} />
+        <ModelPicker models={models} value={model} onChange={onModelChange} onRefresh={onRefreshModels} disabled={disabled} />
 
         <div className="space-y-2">
           <span className="text-xs font-medium text-foreground/80">比例</span>

@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react"
 
+import { NewApiClient } from "@/api/newapi/client"
+
 import { AiContext, type AiContextValue } from "./context"
 import { MAX_COUNT, MAX_REFERENCE_BYTES, MIN_COUNT, PROMPT_MAX_LENGTH } from "./constants"
 import { buildGenerationInput, runGeneration } from "./generate"
@@ -61,6 +63,21 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
     setActiveChannelIdState(id)
     saveActiveChannelId(id)
   }, [])
+
+  const refreshModels = useCallback(async () => {
+    const channel = activeChannel
+    if (!channel?.baseUrl.trim()) return []
+
+    const discovered = await new NewApiClient(channel).listModels()
+    setChannelsState((current) => {
+      const next = current.map((item) =>
+        item.id === channel.id ? { ...item, models: discovered } : item
+      )
+      saveChannels(next)
+      return next
+    })
+    return discovered
+  }, [activeChannel])
 
   const setPrompt = useCallback((next: string) => {
     const capped = next.slice(0, PROMPT_MAX_LENGTH)
@@ -198,6 +215,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       isConfigured: Boolean(activeChannel?.baseUrl.trim()),
       setChannels,
       setActiveChannelId,
+      refreshModels,
       setPrompt,
       addReferences,
       removeReference,
@@ -220,6 +238,7 @@ export function AiProvider({ children }: { children: React.ReactNode }) {
       error,
       setChannels,
       setActiveChannelId,
+      refreshModels,
       setPrompt,
       addReferences,
       removeReference,
