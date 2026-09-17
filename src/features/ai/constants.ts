@@ -29,7 +29,15 @@ export const ASPECT_RATIO_LABELS: Record<AspectRatio, string> = {
   "9:16": "9:16",
 }
 
-export const BASE_RESOLUTIONS: BaseResolution[] = [512, 1024, 1536, 2048]
+export const BASE_RESOLUTIONS: BaseResolution[] = [512, 1024, 1536, 2048, 3840]
+
+export const RESOLUTION_LABELS: Record<BaseResolution, string> = {
+  512: "512P",
+  1024: "1024P",
+  1536: "1536P",
+  2048: "2048P",
+  3840: "4K",
+}
 
 /** Multipliers applied to the base value, which is the long edge. */
 export const ASPECT_RATIO_VALUES: Record<Exclude<AspectRatio, "auto">, [number, number]> =

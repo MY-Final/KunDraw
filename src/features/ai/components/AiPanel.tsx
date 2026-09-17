@@ -212,6 +212,7 @@ export function AiPanel({ onOpenSettings }: { onOpenSettings: () => void }) {
         {usesReferences
           ? `将附带 ${panelReferences.length} 张参考图，尺寸 ${size ?? "自动"}`
           : `文生图，尺寸 ${size ?? "自动"}`}
+        {panelResolution === 3840 ? <span className="text-amber-600">· 4K 生成较慢，需模型与网关支持</span> : null}
       </p>
 
       <ResultGallery

@@ -26,7 +26,7 @@ export class PromptShapeUtil extends BaseBoxShapeUtil<PromptShape> {
     model: T.string,
     mode: T.literalEnum("text", "image"),
     aspectRatio: T.literalEnum("auto", "1:1", "4:3", "3:2", "16:9", "21:9", "3:4", "2:3", "9:16"),
-    resolution: T.literalEnum(512, 1024, 1536, 2048),
+    resolution: T.literalEnum(512, 1024, 1536, 2048, 3840),
     count: T.number,
     referenceImages: T.arrayOf(T.string),
     status: T.literalEnum("idle", "generating", "error"),

@@ -15,6 +15,7 @@ import {
   BASE_RESOLUTIONS,
   MAX_COUNT,
   MIN_COUNT,
+  RESOLUTION_LABELS,
 } from "../constants"
 import type { AspectRatio, BaseResolution, GenerationMode } from "../types"
 import { ChannelPicker } from "./ChannelPicker"
@@ -33,7 +34,7 @@ const ASPECT_CHOICES: Choice<AspectRatio>[] = ASPECT_RATIOS.map((value) => ({
 
 const RESOLUTION_CHOICES: Choice<string>[] = BASE_RESOLUTIONS.map((value) => ({
   value: String(value),
-  label: `${value}P`,
+  label: RESOLUTION_LABELS[value],
 }))
 
 export function GenerationSettings({
@@ -99,7 +100,7 @@ export function GenerationSettings({
 
           <div className="space-y-2">
             <span className="text-xs font-medium text-foreground/80">分辨率</span>
-            <ChoiceGroup ariaLabel="分辨率" value={String(resolution)} choices={RESOLUTION_CHOICES} onChange={(value) => onResolutionChange(Number(value) as BaseResolution)} disabled={disabled} />
+            <ChoiceGroup ariaLabel="分辨率" value={String(resolution)} choices={RESOLUTION_CHOICES} onChange={(value) => onResolutionChange(Number(value) as BaseResolution)} disabled={disabled} wrap />
           </div>
 
           <div className="flex items-center justify-between gap-3">

@@ -1,7 +1,7 @@
 export type AspectRatio = "auto" | "1:1" | "4:3" | "3:2" | "16:9" | "21:9" | "3:4" | "2:3" | "9:16"
 
 /** Base values are the long edge in pixels; the short edge follows the ratio. */
-export type BaseResolution = 512 | 1024 | 1536 | 2048
+export type BaseResolution = 512 | 1024 | 1536 | 2048 | 3840
 
 export type GenerationMode = "text" | "image"
 
