@@ -1,5 +1,5 @@
 import { NewApiClient } from "@/api/newapi/client"
-import { describeNewApiError, toNewApiError } from "@/api/newapi/errors"
+import { describeNewApiError, NewApiError, toNewApiError } from "@/api/newapi/errors"
 import { generateImages } from "@/api/newapi/images"
 
 import { computeSize } from "./constants"
@@ -14,9 +14,15 @@ import type {
 
 export async function imageSourceToBlob(source: string): Promise<Blob> {
   if (!source.startsWith("data:")) {
-    const response = await fetch(source)
-    if (!response.ok) throw new Error(`无法读取参考图（HTTP ${response.status}）`)
-    return response.blob()
+    try {
+      const response = await fetch(source)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return response.blob()
+    } catch (error) {
+      throw new NewApiError("network", "无法读取远程参考图", {
+        detail: error instanceof Error ? error.message : undefined,
+      })
+    }
   }
 
   const [header, base64] = source.split(",")
@@ -94,6 +100,7 @@ export async function runGeneration(
       prompt: input.prompt,
       count: input.count,
       size: input.size,
+      responseFormat: "b64_json",
       references,
     })
 
