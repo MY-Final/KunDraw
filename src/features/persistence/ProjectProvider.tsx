@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
-import { releaseAllRuntimeUrls } from "./assets"
 import { getStartupState } from "./boot"
 import { clearCanvasContent, loadProjectCanvas, saveProjectCanvas } from "./canvasStorage"
 import { ProjectContext, type ProjectContextValue } from "./context"
@@ -246,7 +245,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       await clearRecords(PROJECTS_STORE)
       await clearRecords(ASSETS_STORE)
       clearCanvasContent(editor)
-      releaseAllRuntimeUrls()
 
       const created = await createProjectRecord()
       await writeCurrentProjectId(created.id)

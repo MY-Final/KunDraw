@@ -12,10 +12,10 @@ export type StoredAsset = {
 /** Stored snapshots point at this prefix instead of a runtime-only URL. */
 const ASSET_SRC_PREFIX = "kundraw-asset:"
 
-// Object URLs live only for this session; the maps let a save find the stored
-// asset again instead of writing a `blob:` URL into IndexedDB.
-const objectUrlByAssetId = new Map<string, string>()
-const assetIdByObjectUrl = new Map<string, string>()
+// Which live source each stored asset came from. tldraw only accepts data or
+// remote urls for assets, so the live store keeps its own src and only the
+// persisted snapshot is rewritten to an asset reference.
+const storedSrcByAssetId = new Map<string, string>()
 
 export function assetSrcFor(assetId: string) {
   return `${ASSET_SRC_PREFIX}${assetId}`
@@ -26,9 +26,12 @@ export function assetIdFromSrc(src: string | null | undefined) {
   return src.slice(ASSET_SRC_PREFIX.length)
 }
 
-export function assetIdForRuntimeUrl(src: string | null | undefined) {
-  if (!src) return null
-  return assetIdByObjectUrl.get(src) ?? null
+export function isStoredAssetSrc(assetId: string, src: string | null | undefined) {
+  return Boolean(src) && storedSrcByAssetId.get(assetId) === src
+}
+
+export function rememberStoredAssetSrc(assetId: string, src: string) {
+  storedSrcByAssetId.set(assetId, src)
 }
 
 export function dataUrlToBlob(dataUrl: string) {
@@ -42,6 +45,15 @@ export function dataUrlToBlob(dataUrl: string) {
   }
 
   return new Blob([bytes], { type: mimeType })
+}
+
+export function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error ?? new Error("无法读取图片数据"))
+    reader.readAsDataURL(blob)
+  })
 }
 
 /** Reads a data / object / remote image source into a Blob, or null when it cannot be read. */
@@ -68,40 +80,11 @@ export async function storeImageAsset(asset: {
   await writeRecord(ASSETS_STORE, { ...asset, createdAt: Date.now() } satisfies StoredAsset)
 }
 
-export function runtimeUrlForAsset(assetId: string, blob: Blob) {
-  const existing = objectUrlByAssetId.get(assetId)
-  if (existing) return existing
-
-  const url = URL.createObjectURL(blob)
-  objectUrlByAssetId.set(assetId, url)
-  assetIdByObjectUrl.set(url, assetId)
-  return url
-}
-
-export async function ensureRuntimeUrl(assetId: string) {
-  const existing = objectUrlByAssetId.get(assetId)
-  if (existing) return existing
-
-  const stored = await readRecord<StoredAsset>(ASSETS_STORE, assetId)
-  return stored ? runtimeUrlForAsset(stored.id, stored.blob) : null
-}
-
-export function releaseRuntimeUrl(assetId: string) {
-  const url = objectUrlByAssetId.get(assetId)
-  if (!url) return
-
-  URL.revokeObjectURL(url)
-  objectUrlByAssetId.delete(assetId)
-  assetIdByObjectUrl.delete(url)
-}
-
-export function releaseAllRuntimeUrls() {
-  for (const url of objectUrlByAssetId.values()) URL.revokeObjectURL(url)
-  objectUrlByAssetId.clear()
-  assetIdByObjectUrl.clear()
+export function readStoredAsset(assetId: string) {
+  return readRecord<StoredAsset>(ASSETS_STORE, assetId)
 }
 
 export async function deleteStoredAssets(assetIds: string[]) {
   await deleteRecords(ASSETS_STORE, assetIds)
-  for (const assetId of assetIds) releaseRuntimeUrl(assetId)
+  for (const assetId of assetIds) storedSrcByAssetId.delete(assetId)
 }

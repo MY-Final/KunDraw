@@ -1,24 +1,23 @@
 import type {
   Editor,
   TLAssetId,
-  TLAssetPartial,
   TLImageAsset,
   TLRecord,
   TLSessionStateSnapshot,
   TLShapeId,
-  TLShapePartial,
   TLStoreSnapshot,
 } from "tldraw"
 
 import { IMAGE_SHAPE_TYPE, type ImageShape } from "@/features/canvas/shapeTypes"
 
 import {
-  assetIdForRuntimeUrl,
   assetIdFromSrc,
   assetSrcFor,
+  blobToDataUrl,
   blobFromImageSrc,
-  ensureRuntimeUrl,
-  runtimeUrlForAsset,
+  isStoredAssetSrc,
+  readStoredAsset,
+  rememberStoredAssetSrc,
   storeImageAsset,
 } from "./assets"
 import { CANVASES_STORE, deleteRecord, readRecord, readRecords, writeRecord } from "./db"
@@ -35,28 +34,11 @@ function isImageAsset(record: TLRecord): record is TLImageAsset {
   return record.typeName === "asset" && (record as TLImageAsset).type === "image"
 }
 
-function imageShapesForAsset(editor: Editor, assetId: string) {
-  return editor.store
-    .allRecords()
-    .filter(
-      (record): record is ImageShape =>
-        record.typeName === "shape" &&
-        record.type === IMAGE_SHAPE_TYPE &&
-        record.props.assetId === assetId
-    )
-}
-
-/**
- * Moves image sources into IndexedDB and points the live store at the runtime
- * object URL, so canvas data never depends on a temporary remote URL.
- */
+/** Copies image bytes into IndexedDB so a project never depends on a temporary URL. */
 async function externalizeImageAssets(editor: Editor) {
-  const assetUpdates: TLAssetPartial[] = []
-  const shapeUpdates: TLShapePartial<ImageShape>[] = []
-
   for (const asset of editor.store.allRecords().filter(isImageAsset)) {
     const src = asset.props.src
-    if (!src || assetIdForRuntimeUrl(src)) continue
+    if (!src || isStoredAssetSrc(asset.id, src) || assetIdFromSrc(src)) continue
 
     const blob = await blobFromImageSrc(src)
     if (!blob) continue
@@ -69,35 +51,21 @@ async function externalizeImageAssets(editor: Editor) {
       height: asset.props.h,
     })
 
-    const runtimeUrl = runtimeUrlForAsset(asset.id, blob)
-    assetUpdates.push({ id: asset.id, type: "image", props: { src: runtimeUrl } })
-    for (const shape of imageShapesForAsset(editor, asset.id)) {
-      shapeUpdates.push({ id: shape.id, type: IMAGE_SHAPE_TYPE, props: { imageUrl: runtimeUrl } })
-    }
+    rememberStoredAssetSrc(asset.id, src)
   }
-
-  if (assetUpdates.length === 0) return
-
-  editor.run(
-    () => {
-      editor.updateAssets(assetUpdates)
-      if (shapeUpdates.length > 0) editor.updateShapes(shapeUpdates)
-    },
-    { history: "ignore" }
-  )
 }
 
 function withStoredAssetSources(record: TLRecord): TLRecord {
   if (isImageAsset(record)) {
-    const assetId = assetIdForRuntimeUrl(record.props.src)
-    return assetId ? { ...record, props: { ...record.props, src: assetSrcFor(assetId) } } : record
+    return isStoredAssetSrc(record.id, record.props.src)
+      ? { ...record, props: { ...record.props, src: assetSrcFor(record.id) } }
+      : record
   }
 
   if (record.typeName === "shape" && record.type === IMAGE_SHAPE_TYPE) {
     const shape = record as ImageShape
-    const assetId = assetIdForRuntimeUrl(shape.props.imageUrl)
-    return assetId
-      ? { ...shape, props: { ...shape.props, imageUrl: assetSrcFor(assetId) } }
+    return isStoredAssetSrc(shape.props.assetId, shape.props.imageUrl)
+      ? { ...shape, props: { ...shape.props, imageUrl: assetSrcFor(shape.props.assetId) } }
       : record
   }
 
@@ -105,22 +73,29 @@ function withStoredAssetSources(record: TLRecord): TLRecord {
 }
 
 async function withRuntimeAssetSources(record: TLRecord): Promise<TLRecord> {
-  // A missing blob resolves to an empty source so the node shows its placeholder
-  // instead of pointing at a reference the browser cannot load.
-  const readAssetSrc = async (src: string | null | undefined) => {
-    const assetId = assetIdFromSrc(src)
-    if (!assetId) return src ?? ""
-    return (await ensureRuntimeUrl(assetId)) ?? ""
+  // Stored blobs come back as data urls: tldraw only accepts data or remote
+  // sources for assets. A missing blob becomes an empty source so the node
+  // shows its placeholder instead of a reference the browser cannot load.
+  const readAssetSrc = async (assetId: string) => {
+    const stored = await readStoredAsset(assetId)
+    if (!stored) return ""
+    const dataUrl = await blobToDataUrl(stored.blob)
+    rememberStoredAssetSrc(assetId, dataUrl)
+    return dataUrl
   }
 
   if (isImageAsset(record)) {
-    const src = await readAssetSrc(record.props.src)
+    const assetId = assetIdFromSrc(record.props.src)
+    if (!assetId) return record
+    const src = await readAssetSrc(assetId)
     return src === record.props.src ? record : { ...record, props: { ...record.props, src } }
   }
 
   if (record.typeName === "shape" && record.type === IMAGE_SHAPE_TYPE) {
     const shape = record as ImageShape
-    const imageUrl = await readAssetSrc(shape.props.imageUrl)
+    const assetId = assetIdFromSrc(shape.props.imageUrl)
+    if (!assetId) return record
+    const imageUrl = await readAssetSrc(assetId)
     return imageUrl === shape.props.imageUrl
       ? record
       : { ...shape, props: { ...shape.props, imageUrl } }
