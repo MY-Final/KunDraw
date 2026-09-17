@@ -6,6 +6,7 @@ export type NodeAction =
   | { type: "preview-image"; shapeId: TLShapeId }
   | { type: "regenerate-image"; shapeId: TLShapeId }
   | { type: "download-image"; shapeId: TLShapeId }
+  | { type: "delete-node"; shapeId: TLShapeId }
 
 type NodeActionHandler = (action: NodeAction) => void
 

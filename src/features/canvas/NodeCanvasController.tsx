@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import type { TLEventInfo, TLShapeId } from "tldraw"
+import type { TLShapeId } from "tldraw"
 
 import { downloadImage } from "@/features/ai/canvas"
 import { useAi } from "@/features/ai/useAi"
@@ -48,6 +48,11 @@ export function NodeCanvasController() {
         setPreviewShapeId(action.shapeId)
         return
       }
+      if (action.type === "delete-node") {
+        editor.deleteShapes([action.shapeId])
+        editor.focus()
+        return
+      }
       if (action.type === "regenerate-image") {
         const image = editor.getShape<ImageShape>(action.shapeId)
         if (image?.type === IMAGE_SHAPE_TYPE && image.props.sourcePromptId) {
@@ -75,18 +80,6 @@ export function NodeCanvasController() {
     }
 
     const unregisterActions = registerNodeActionHandler(editor, handleAction)
-    const handleEditorEvent = (event: TLEventInfo) => {
-      if (
-        event.type === "click" &&
-        event.name === "double_click" &&
-        event.phase === "up" &&
-        event.target === "canvas"
-      ) {
-        const point = editor.screenToPage(event.point)
-        createPromptNode(editor, { point: { x: point.x - 170, y: point.y - 40 } })
-      }
-    }
-    editor.on("event", handleEditorEvent)
     const unregisterDeleteHandler = editor.sideEffects.registerAfterDeleteHandler(
       "shape",
       (shape) => cleanupRelationsForDeletedShape(editor, shape.id)
@@ -111,7 +104,6 @@ export function NodeCanvasController() {
 
     return () => {
       unregisterActions()
-      editor.off("event", handleEditorEvent)
       unregisterDeleteHandler()
       window.removeEventListener("keydown", onKeyDown)
     }

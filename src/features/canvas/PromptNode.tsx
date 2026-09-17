@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import { Copy, ImagePlus, LoaderCircle, MoreHorizontal, Sparkles, X } from "lucide-react"
+import { Copy, ImagePlus, LoaderCircle, Sparkles, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { HTMLContainer, useValue, type Editor, type TLImageAsset, type TLShapeId } from "tldraw"
 
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ACCEPTED_REFERENCE_TYPES, ASPECT_RATIOS, ASPECT_RATIO_LABELS } from "@/features/ai/constants"
 
 import { dispatchNodeAction } from "./nodeEvents"
+import { NodeFloatingToolbar } from "./NodeFloatingToolbar"
 import { addReferenceFilesToPrompt, removePromptReferences } from "./references"
 import {
   PROMPT_SHAPE_TYPE,
@@ -53,21 +54,29 @@ function ReferenceThumbnail({ shape, editor, onRemove }: { shape: ImageShape; ed
 export function PromptNode({ shape, editor }: { shape: PromptShape; editor: Editor }) {
   const referenceInputRef = useRef<HTMLInputElement>(null)
   const { props } = shape
+  const isSelected = useValue(
+    `kundraw prompt selected ${shape.id}`,
+    () => editor.getOnlySelectedShape()?.id === shape.id,
+    [editor, shape.id]
+  )
   const referenceShapes = props.referenceImages
     .map((id) => editor.getShape(id as TLShapeId))
     .filter((item): item is ImageShape => item?.type === "kundraw-image")
 
   return (
     <HTMLContainer className="group/prompt overflow-visible">
+      {isSelected ? (
+        <NodeFloatingToolbar label="Prompt 操作">
+          <Button variant="ghost" size="xs" disabled={!props.prompt.trim() || props.status === "generating"} onClick={() => dispatchNodeAction(editor, { type: "generate-prompt", shapeId: shape.id })}><Sparkles />生成</Button>
+          <Button variant="ghost" size="xs" disabled={!props.prompt} onClick={() => void navigator.clipboard.writeText(props.prompt)}><Copy />复制提示词</Button>
+          <Button variant="ghost" size="icon-xs" className="text-destructive" aria-label="删除 Prompt" title="删除 Prompt" onClick={() => dispatchNodeAction(editor, { type: "delete-node", shapeId: shape.id })}><Trash2 /></Button>
+        </NodeFloatingToolbar>
+      ) : null}
       <article className="flex size-full flex-col overflow-hidden rounded-xl border border-border bg-background shadow-lg shadow-foreground/5">
         <header className="flex h-11 shrink-0 items-center justify-between border-b border-border px-3">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <span className="grid size-6 place-items-center rounded-md bg-brand-subtle text-brand"><Sparkles className="size-3.5" /></span>
             {props.mode === "image" ? "图生图" : "文生图"}
-          </div>
-          <div className="pointer-events-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover/prompt:opacity-100 focus-within:opacity-100">
-            <Button variant="ghost" size="icon-xs" aria-label="复制提示词" title="复制提示词" onPointerDown={stopPointer} onClick={() => void navigator.clipboard.writeText(props.prompt)}><Copy /></Button>
-            <Button variant="ghost" size="icon-xs" aria-label="更多" title="更多" onPointerDown={stopPointer}><MoreHorizontal /></Button>
           </div>
         </header>
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col gap-3 p-3" onPointerDown={stopPointer}>
