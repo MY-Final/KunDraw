@@ -8,6 +8,8 @@ import {
 } from "tldraw"
 
 import { IMAGE_SHAPE_TYPE, type ImageShape } from "@/features/canvas/shapeTypes"
+import { extensionFor, sanitizeNamePart, timestampFor } from "@/lib/fileName"
+
 import type { GeneratedImage } from "./types"
 
 /** Keeps large generations from dominating the canvas. */
@@ -128,9 +130,19 @@ function triggerDownload(href: string, filename: string) {
   link.remove()
 }
 
-function filenameFor(image: GeneratedImage) {
-  const extension = mimeFromUrl(image.url).split("/")[1]?.replace("jpeg", "jpg") ?? "png"
-  return `kundraw-${image.id}.${extension}`
+/** Readable download name: kundraw-<project>-<prompt or model>-<timestamp>.<ext>. */
+export function imageFileName(options: {
+  projectName?: string
+  prompt?: string
+  model?: string
+  createdAt?: number
+  mimeType?: string
+}) {
+  const parts = ["kundraw", options.projectName, options.prompt || options.model]
+    .map((part) => (part ? sanitizeNamePart(part) : ""))
+    .filter(Boolean)
+
+  return `${parts.join("-")}-${timestampFor(options.createdAt ?? Date.now())}.${extensionFor(options.mimeType ?? "image/png")}`
 }
 
 /**
@@ -138,11 +150,18 @@ function filenameFor(image: GeneratedImage) {
  * saves the file; when CORS blocks that, the image is opened instead so the user
  * can still save it. Returns how the download was handled.
  */
-export async function downloadImage(image: GeneratedImage) {
-  const filename = filenameFor(image)
+export async function downloadImage(image: GeneratedImage, filename?: string) {
+  const name =
+    filename ??
+    imageFileName({
+      prompt: image.source.prompt,
+      model: image.source.model,
+      createdAt: image.createdAt,
+      mimeType: mimeFromUrl(image.url),
+    })
 
   if (image.url.startsWith("data:")) {
-    triggerDownload(image.url, filename)
+    triggerDownload(image.url, name)
     return "downloaded" as const
   }
 
@@ -151,7 +170,7 @@ export async function downloadImage(image: GeneratedImage) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const blob = await response.blob()
     const objectUrl = URL.createObjectURL(blob)
-    triggerDownload(objectUrl, filename)
+    triggerDownload(objectUrl, name)
     URL.revokeObjectURL(objectUrl)
     return "downloaded" as const
   } catch (error) {

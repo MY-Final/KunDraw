@@ -2,8 +2,9 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import type { TLShapeId } from "tldraw"
 
-import { downloadImage } from "@/features/ai/canvas"
+import { downloadImage, imageFileName } from "@/features/ai/canvas"
 import { useAi } from "@/features/ai/useAi"
+import { useProject } from "@/features/persistence/useProject"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
 import {
@@ -28,6 +29,7 @@ function isFormField(target: EventTarget | null) {
 export function NodeCanvasController() {
   const editor = useWorkspaceEditor()
   const ai = useAi()
+  const { project } = useProject()
   const [previewShapeId, setPreviewShapeId] = useState<TLShapeId | null>(null)
 
   useEffect(() => {
@@ -76,7 +78,13 @@ export function NodeCanvasController() {
           mode: "text",
           count: 1,
         },
-      })
+      }, imageFileName({
+        projectName: project.name,
+        prompt: image.props.prompt,
+        model: image.props.model,
+        createdAt: image.props.createdAt,
+        mimeType: image.props.mimeType,
+      }))
     }
 
     const unregisterActions = registerNodeActionHandler(editor, handleAction)
@@ -107,7 +115,7 @@ export function NodeCanvasController() {
       unregisterDeleteHandler()
       window.removeEventListener("keydown", onKeyDown)
     }
-  }, [ai, editor])
+  }, [ai, editor, project.name])
 
   return editor ? (
     <ImagePreviewDialog

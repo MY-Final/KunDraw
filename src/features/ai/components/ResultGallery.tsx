@@ -4,9 +4,10 @@ import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { useProject } from "@/features/persistence/useProject"
 import { useWorkspaceEditor } from "@/hooks/useEditor"
 
-import { addImageToCanvas, downloadImage } from "../canvas"
+import { addImageToCanvas, downloadImage, imageFileName } from "../canvas"
 import type { GeneratedImage } from "../types"
 
 function ResultCard({
@@ -19,6 +20,7 @@ function ResultCard({
   onRemove: (id: string) => void
 }) {
   const editor = useWorkspaceEditor()
+  const { project } = useProject()
   const [adding, setAdding] = useState(false)
 
   const handleAdd = useCallback(async () => {
@@ -36,13 +38,21 @@ function ResultCard({
   }, [adding, editor, image])
 
   const handleDownload = useCallback(async () => {
-    const result = await downloadImage(image)
+    const result = await downloadImage(
+      image,
+      imageFileName({
+        projectName: project.name,
+        prompt: image.source.prompt,
+        model: image.source.model,
+        createdAt: image.createdAt,
+      })
+    )
     if (result === "opened") {
       toast.info("已在新的标签页打开图片", {
         description: "浏览器阻止了直接下载，可右键保存图片",
       })
     }
-  }, [image])
+  }, [image, project.name])
 
   return (
     <div className="group/result relative aspect-square overflow-hidden rounded-md border border-border bg-muted">
