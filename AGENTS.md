@@ -81,7 +81,10 @@ StatusBar                              (32px)
 | `src/features/ai/generate.ts` | Request assembly + generation orchestration |
 | `src/features/ai/canvas.ts` | `addImageToCanvas()` and image download |
 | `src/features/ai/storage.ts` | App settings (channels, API key, prompt draft) in IndexedDB, hydrated at boot |
-| `src/features/ai/components/` | `AiPanel`, `AiSettingsDialog`, `ResultGallery`, pickers, inputs |
+| `src/features/ai/context.ts` | `AiState`, `AiContextValue`, `GenerationOutcome` types |
+| `src/features/ai/types.ts` | `Channel`, `GeneratedImage`, `ReferenceImage` and request shapes |
+| `src/features/ai/useAi.ts` | `useAi` / `useOptionalAi` context hooks |
+| `src/features/ai/components/` | `AiPanel`, `AiSettingsDialog`, `ResultGallery` + `ResultPreviewDialog`, `GenerateButton`, pickers, inputs |
 | `src/hooks/useEditor.tsx` | `EditorProvider` and editor context hooks |
 | `src/hooks/useSelectedShapes.ts` | Reactive current selection |
 | `src/features/persistence/db.ts` | IndexedDB stores and record helpers (projects, canvases, assets, settings, meta) |
@@ -92,7 +95,20 @@ StatusBar                              (32px)
 | `src/features/persistence/components/` | Project menu, save status indicator, local data section |
 | `src/features/persistence/resultStore.ts` | Per-project generation gallery (image blobs in IndexedDB) |
 | `src/features/ai/referenceRoles.ts` | Reference role summary and the prompt brief sent with references |
+| `src/features/canvas/shapeTypes.ts` | `PromptShape` / `ImageShape` types, custom shape type ids, relation meta |
+| `src/features/canvas/PromptShapeUtil.tsx` | tldraw shape util for Prompt nodes (props, defaults, indicator) |
+| `src/features/canvas/ImageShapeUtil.tsx` | tldraw shape util for image nodes; crop, `createShapeForAsset`, prop migrations |
+| `src/features/canvas/PromptNode.tsx` | Prompt node UI: text, references, model, ratio, generate / cancel |
+| `src/features/canvas/ImageNode.tsx` | Image node UI: crop rendering and floating actions |
+| `src/features/canvas/NodeCanvasController.tsx` | Mounted once: handles node actions, preview / inpaint dialogs, `p` shortcut |
+| `src/features/canvas/nodeCommands.ts` | Creates prompt nodes and generates / inserts image grids |
+| `src/features/canvas/nodeEvents.ts` | `dispatchNodeAction` bridge from node UI to the controller |
+| `src/features/canvas/relations.ts` | Arrow relations between nodes and cleanup on delete |
+| `src/features/canvas/references.ts` | Image shape ↔ reference conversion and reference roles |
+| `src/features/canvas/NodeFloatingToolbar.tsx` | Shared floating toolbar shell for node actions |
+| `src/features/canvas/ImagePreviewDialog.tsx` | Full preview opened by double-clicking an image node |
 | `src/features/canvas/InpaintDialog.tsx` | Mask painting dialog for local repaint |
+| `src/features/canvas/exportCanvas.ts` | Exports the current page as a PNG |
 | `src/features/canvas/canvasMaintenance.ts` | One-time normalizers that run after a project loads |
 | `src/components/workspace/ArrangeSections.tsx` | Align / distribute / group / layer controls |
 | `src/components/workspace/PageMenu.tsx` | Page list with create, rename and delete |
@@ -183,6 +199,47 @@ editor.select(id)
 
 Never construct image shapes by hand — `createShapeForAsset` is what keeps the
 asset id, aspect ratio and props correct.
+
+## Node canvas
+
+Two custom tldraw shapes make generation a repeatable on-canvas loop:
+Prompt → Generate → Image → Reference → Prompt.
+
+- `PROMPT_SHAPE_TYPE` (`kundraw-prompt`) is a Prompt node on the canvas, not a
+  form in React state. Its props cover prompt text, model, mode, aspect ratio,
+  resolution, count, `status` (`idle` / `generating` / `error`), the ids of its
+  reference images and its `generatedImageIds`.
+- `IMAGE_SHAPE_TYPE` (`kundraw-image`) wraps an image asset plus the prompt,
+  model, `createdAt`, a normalized `crop` (null = whole image) and
+  `sourcePromptId`, which points back at the Prompt node that produced it.
+- Both utils are registered in `CanvasArea` (`shapeUtils = [PromptShapeUtil,
+  ImageShapeUtil]`). The image util owns `createShapeForAsset` and a crop prop
+  migration; never build either node shape by hand.
+
+Flow and rules:
+
+- Node UI never touches the controller directly. It calls
+  `dispatchNodeAction(editor, action)`; `nodeEvents.ts` is a per-`Editor` WeakMap
+  bridge, and `NodeCanvasController` (mounted once in `App`) is the single
+  handler. It also owns the preview / inpaint dialogs and the `p` shortcut.
+- `nodeCommands.ts` is the only place nodes are created or generated:
+  `createPromptNode`, `createReferencePrompt` (image → pre-linked image-to-image
+  prompt), `generatePromptNode` (sets `status: "generating"`, calls
+  `ai.generate`, then inserts results), and the grid inserters
+  `addGeneratedImagesForPrompt` / `addDerivedImages`.
+- Relations are ordinary tldraw arrows carrying `meta.kundrawRelation`, not
+  bindings between the two nodes themselves. `relations.ts` creates them faint
+  and locked and sends them to the back; `cleanupRelationsForDeletedShape` runs
+  from the editor's after-delete side effect to remove stale arrows and drop
+  deleted ids from prompt/image props.
+- `generatePromptNode` consumes a `GenerationOutcome` (`ok` / `cancelled` /
+  `busy` / `error`). Only `error` sets `status: "error"`; `cancelled` and `busy`
+  return the node to `idle`, so a cancelled or already-busy generation is never
+  shown as failed.
+- Reference images are image shapes referenced by id. `references.ts` converts
+  between a shape and a `ReferenceImage`; `referenceRoles.ts` summarizes the
+  roles that go into the generation brief.
+- `exportCanvasAsPng` is the only page-export path; it refuses empty pages.
 
 ## Conventions
 
