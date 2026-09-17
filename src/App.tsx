@@ -18,6 +18,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { AiProvider } from "@/features/ai/AiProvider"
 import { AiSettingsDialog } from "@/features/ai/components/AiSettingsDialog"
 import { NodeCanvasController } from "@/features/canvas/NodeCanvasController"
+import { ProjectProvider } from "@/features/persistence/ProjectProvider"
 import { EditorProvider, useWorkspaceEditor } from "@/hooks/useEditor"
 import { useProjectName } from "@/hooks/useProjectName"
 
@@ -122,7 +123,9 @@ function App() {
   return (
     <EditorProvider>
       <AiProvider>
-        <Workspace />
+        <ProjectProvider>
+          <Workspace />
+        </ProjectProvider>
       </AiProvider>
     </EditorProvider>
   )
